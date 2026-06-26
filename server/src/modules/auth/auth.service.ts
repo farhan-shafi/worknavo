@@ -139,7 +139,15 @@ export async function requestPasswordReset(email: string) {
     user.passwordResetTokenHash = undefined;
     user.passwordResetExpiresAt = undefined;
     await user.save();
-    throw error;
+
+    if (error instanceof ApiError) {
+      throw error;
+    }
+
+    throw new ApiError(
+      502,
+      'The password reset email could not be delivered. Check your SMTP settings and try again.',
+    );
   }
 }
 
