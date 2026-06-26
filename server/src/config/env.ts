@@ -9,7 +9,12 @@ const optionalEnvironmentString = z.preprocess(
 );
 
 const environmentSchema = z.object({
-  CLIENT_URL: z.string().url().default('http://localhost:5173'),
+  CLIENT_URL: z
+    .string()
+    .trim()
+    .url()
+    .default('http://localhost:5173')
+    .transform((value) => new URL(value).origin),
   JWT_ACCESS_SECRET: z
     .string()
     .min(32)
