@@ -1,0 +1,40 @@
+{
+  "name": "@clientflow/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "seed:demo": "tsx src/scripts/seed-demo.ts",
+    "migrate:organizations": "tsx src/scripts/migrate-organizations.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@clientflow/shared": "*",
+    "bcryptjs": "^3.0.3",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.5.0",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.5.2",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^8.16.0",
+    "nodemailer": "^7.0.13",
+    "pdfkit": "^0.19.1",
+    "zod": "^3.25.64"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.3",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^22.15.32",
+    "@types/nodemailer": "^7.0.12",
+    "@types/pdfkit": "^0.17.6",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

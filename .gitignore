@@ -1,0 +1,22 @@
+node_modules
+dist
+.DS_Store
+*.log
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+coverage
+.vite
+.turbo
+tmp/
+
+# Local uploads and generated documents
+server/uploads
+server/generated
+
+# Editor settings
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json

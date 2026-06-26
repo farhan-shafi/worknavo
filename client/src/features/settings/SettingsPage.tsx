@@ -1,0 +1,322 @@
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Building2,
+  CircleDollarSign,
+  FileText,
+  LoaderCircle,
+  Save,
+  UserRound,
+} from 'lucide-react';
+import { type ReactNode } from 'react';
+import { useForm } from 'react-hook-form';
+import { toast } from 'sonner';
+
+import { PageHeader } from '../../components/shared/PageHeader';
+import { Button } from '../../components/ui/button';
+import { Card } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Select } from '../../components/ui/select';
+import { Textarea } from '../../components/ui/textarea';
+import { ApiError, request } from '../../lib/api-client';
+import { authApi } from '../auth/auth.api';
+import { sessionQueryKey, useAuth } from '../auth/use-auth';
+import { settingsSchema, type SettingsFormValues } from './settings.schemas';
+
+export function SettingsPage() {
+  const { organization, permissions, user } = useAuth();
+  const queryClient = useQueryClient();
+  const form = useForm<SettingsFormValues>({
+    resolver: zodResolver(settingsSchema),
+    values: {
+      name: user?.name ?? '',
+      businessName: organization?.name ?? user?.businessName ?? '',
+      businessAddress:
+        organization?.businessAddress ?? user?.businessAddress ?? '',
+      defaultCurrency:
+        organization?.defaultCurrency ?? user?.defaultCurrency ?? 'USD',
+      defaultHourlyRate:
+        organization?.defaultHourlyRate === null ||
+        organization?.defaultHourlyRate === undefined
+          ? ''
+          : String(organization.defaultHourlyRate),
+      invoicePrefix:
+        organization?.invoicePrefix ?? user?.invoicePrefix ?? 'INV',
+      defaultInvoiceNotes:
+        organization?.defaultInvoiceNotes ?? user?.defaultInvoiceNotes ?? '',
+    },
+  });
+  const saveSettings = useMutation({
+    mutationFn: async (values: SettingsFormValues) => {
+      const profile = await authApi.updateSettings({
+        name: values.name.trim(),
+        businessName: values.businessName.trim() || undefined,
+        businessAddress: values.businessAddress.trim() || undefined,
+        defaultCurrency: values.defaultCurrency,
+        defaultHourlyRate:
+          values.defaultHourlyRate === ''
+            ? undefined
+            : Number(values.defaultHourlyRate),
+        invoicePrefix: values.invoicePrefix.trim().toUpperCase(),
+        defaultInvoiceNotes: values.defaultInvoiceNotes.trim() || undefined,
+      });
+      const workspace = permissions.includes('settings.manage')
+        ? await request<{
+            message: string;
+            organization: NonNullable<
+              ReturnType<typeof useAuth>['organization']
+            >;
+          }>('/organizations/current', {
+            method: 'PATCH',
+            body: JSON.stringify({
+              name: values.businessName.trim() || organization?.name,
+              businessAddress: values.businessAddress.trim() || null,
+              defaultCurrency: values.defaultCurrency,
+              defaultHourlyRate:
+                values.defaultHourlyRate === ''
+                  ? null
+                  : Number(values.defaultHourlyRate),
+              invoicePrefix: values.invoicePrefix.trim().toUpperCase(),
+              defaultInvoiceNotes: values.defaultInvoiceNotes.trim() || null,
+            }),
+          })
+        : null;
+      return { profile, workspace };
+    },
+    onSuccess: ({ profile, workspace }) => {
+      queryClient.setQueryData(sessionQueryKey, (current: unknown) =>
+        current && typeof current === 'object'
+          ? {
+              ...current,
+              user: profile.user,
+              ...(workspace ? { organization: workspace.organization } : {}),
+            }
+          : current,
+      );
+      toast.success(workspace?.message ?? profile.message);
+    },
+    onError: (error) => {
+      if (error instanceof ApiError && error.issues) {
+        for (const [field, messages] of Object.entries(error.issues)) {
+          const message = messages?.[0];
+          if (message && field in form.getValues()) {
+            form.setError(field as keyof SettingsFormValues, { message });
+          }
+        }
+      }
+
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : 'Unable to save your settings.',
+      );
+    },
+  });
+  const fieldError = (field: keyof SettingsFormValues) =>
+    form.formState.errors[field]?.message;
+
+  return (
+    <div className="space-y-6">
+      <PageHeader
+        description="Control the identity and defaults used across your workspace, invoices, reports, and PDFs."
+        eyebrow="Workspace"
+        title="Settings"
+      />
+
+      <form
+        className="space-y-6"
+        onSubmit={form.handleSubmit((values) => saveSettings.mutate(values))}
+      >
+        <SettingsCard
+          description="Your personal account details and sign-in identity."
+          icon={<UserRound className="size-5" />}
+          title="Profile"
+        >
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormControl error={fieldError('name')} label="Your name" required>
+              <Input autoComplete="name" {...form.register('name')} />
+            </FormControl>
+            <FormControl label="Account email">
+              <Input disabled value={user?.email ?? ''} />
+            </FormControl>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard
+          description="This information appears on report and invoice PDFs."
+          icon={<Building2 className="size-5" />}
+          title="Business"
+        >
+          <div className="space-y-5">
+            <FormControl
+              error={fieldError('businessName')}
+              label="Business name"
+            >
+              <Input
+                autoComplete="organization"
+                disabled={!permissions.includes('settings.manage')}
+                placeholder="Your studio or company"
+                {...form.register('businessName')}
+              />
+            </FormControl>
+            <FormControl
+              error={fieldError('businessAddress')}
+              label="Business address"
+            >
+              <Textarea
+                className="min-h-24"
+                disabled={!permissions.includes('settings.manage')}
+                placeholder="Address shown on PDFs"
+                {...form.register('businessAddress')}
+              />
+            </FormControl>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard
+          description="Defaults used when creating projects, work logs, and invoices."
+          icon={<CircleDollarSign className="size-5" />}
+          title="Billing defaults"
+        >
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormControl
+              error={fieldError('defaultCurrency')}
+              label="Default currency"
+              required
+            >
+              <Select
+                disabled={!permissions.includes('settings.manage')}
+                {...form.register('defaultCurrency')}
+              >
+                <option value="USD">USD — US Dollar</option>
+                <option value="PKR">PKR — Pakistani Rupee</option>
+                <option value="GBP">GBP — British Pound</option>
+                <option value="EUR">EUR — Euro</option>
+              </Select>
+            </FormControl>
+            <FormControl
+              error={fieldError('defaultHourlyRate')}
+              label="Default hourly rate"
+            >
+              <Input
+                disabled={!permissions.includes('settings.manage')}
+                inputMode="decimal"
+                min="0"
+                placeholder="0.00"
+                step="0.01"
+                type="number"
+                {...form.register('defaultHourlyRate')}
+              />
+            </FormControl>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard
+          description="New invoice numbers and notes use these values automatically."
+          icon={<FileText className="size-5" />}
+          title="Invoice settings"
+        >
+          <div className="space-y-5">
+            <FormControl
+              error={fieldError('invoicePrefix')}
+              label="Invoice prefix"
+              required
+            >
+              <Input
+                className="uppercase"
+                disabled={!permissions.includes('settings.manage')}
+                placeholder="INV"
+                {...form.register('invoicePrefix')}
+              />
+              <p className="text-muted mt-2 text-xs">
+                New invoices will look like{' '}
+                {(form.watch('invoicePrefix') || 'INV').toUpperCase()}-0001.
+              </p>
+            </FormControl>
+            <FormControl
+              error={fieldError('defaultInvoiceNotes')}
+              label="Default invoice notes"
+            >
+              <Textarea
+                className="min-h-28"
+                disabled={!permissions.includes('settings.manage')}
+                placeholder="Payment instructions or a thank-you note"
+                {...form.register('defaultInvoiceNotes')}
+              />
+            </FormControl>
+          </div>
+        </SettingsCard>
+
+        <div className="sticky bottom-4 flex justify-end">
+          <Button
+            className="shadow-xl shadow-orange-900/15"
+            disabled={saveSettings.isPending}
+            size="lg"
+            type="submit"
+          >
+            {saveSettings.isPending ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <Save className="size-4" />
+            )}
+            {saveSettings.isPending ? 'Saving…' : 'Save settings'}
+          </Button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function SettingsCard({
+  children,
+  description,
+  icon,
+  title,
+}: {
+  children: ReactNode;
+  description: string;
+  icon: ReactNode;
+  title: string;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="border-border flex gap-4 border-b p-5 sm:p-6">
+        <span className="bg-primary-soft text-primary grid size-10 shrink-0 place-items-center rounded-xl">
+          {icon}
+        </span>
+        <div>
+          <h2 className="text-lg font-extrabold">{title}</h2>
+          <p className="text-muted mt-1 text-sm">{description}</p>
+        </div>
+      </div>
+      <div className="p-5 sm:p-6">{children}</div>
+    </Card>
+  );
+}
+
+function FormControl({
+  children,
+  error,
+  label,
+  required = false,
+}: {
+  children: ReactNode;
+  error?: string;
+  label: string;
+  required?: boolean;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-bold">
+        {label}
+        {required ? <span className="text-primary ml-1">*</span> : null}
+      </span>
+      {children}
+      {error ? (
+        <span className="text-danger mt-1.5 block text-xs font-semibold">
+          {error}
+        </span>
+      ) : null}
+    </label>
+  );
+}
