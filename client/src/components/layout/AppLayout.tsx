@@ -1,3 +1,4 @@
+import type { Permission } from '@clientflow/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BriefcaseBusiness,
@@ -18,7 +19,9 @@ import {
   UsersRound,
   X,
   Tags,
+  UserCheck,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -40,7 +43,14 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 
-const navigation = [
+const navigation: Array<{
+  label: string;
+  icon: LucideIcon;
+  href: string;
+  live: boolean;
+  permission?: Permission;
+  hideWhenPermission?: Permission;
+}> = [
   {
     label: 'Overview',
     icon: LayoutDashboard,
@@ -54,6 +64,14 @@ const navigation = [
     href: '/app/team',
     live: true,
     permission: 'members.view',
+  },
+  {
+    label: 'Project Teams',
+    icon: UserCheck,
+    href: '/app/project-teams',
+    live: true,
+    permission: 'members.viewProject',
+    hideWhenPermission: 'members.view',
   },
   {
     label: 'Clients',
@@ -209,11 +227,10 @@ export function AppLayout() {
       <nav className="mt-2 space-y-1">
         {navigation
           .filter(
-            ({ permission }) =>
-              !permission ||
-              auth.permissions.includes(
-                permission as (typeof auth.permissions)[number],
-              ),
+            ({ hideWhenPermission, permission }) =>
+              (!permission || auth.permissions.includes(permission)) &&
+              (!hideWhenPermission ||
+                !auth.permissions.includes(hideWhenPermission)),
           )
           .map(({ href, icon: Icon, label, live }) =>
             live ? (
@@ -249,17 +266,6 @@ export function AppLayout() {
             ),
           )}
       </nav>
-
-      <div className="bg-foreground relative mt-6 overflow-hidden rounded-2xl p-4 text-white">
-        <div className="bg-primary absolute -top-10 -right-10 size-28 rounded-full opacity-25 blur-2xl" />
-        <ShieldCheck className="text-primary-soft relative size-5" />
-        <p className="relative mt-3 text-sm font-extrabold">
-          Secure by default
-        </p>
-        <p className="relative mt-1 text-xs leading-5 text-white/55">
-          Your workspace uses protected routes and httpOnly sessions.
-        </p>
-      </div>
 
       <div className="border-border mt-auto border-t pt-4">
         <NavLink

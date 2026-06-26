@@ -1,4 +1,5 @@
 import type {
+  MembershipRole,
   MessageResponse,
   ProjectListResponse,
   ProjectResponse,
@@ -12,6 +13,20 @@ export interface ProjectFilters {
   search: string;
   status: ProjectStatus | 'all';
   clientId: string;
+}
+
+export interface ProjectTeamMember {
+  membershipId: string;
+  userId: string;
+  name: string;
+  avatarUrl: string | null;
+  jobTitle: string | null;
+  role: MembershipRole;
+  assignmentType: 'project_manager' | 'contributor';
+  categoryIds: string[];
+  weeklyCapacity: number;
+  status: 'active' | 'suspended';
+  projectHoursThisWeek: number;
 }
 
 function queryString(filters: ProjectFilters) {
@@ -51,6 +66,8 @@ export const projectApi = {
     request<ProjectListResponse>(`/clients/${clientId}/projects`),
   get: (projectId: string) =>
     request<ProjectResponse>(`/projects/${projectId}`),
+  team: (projectId: string) =>
+    request<{ members: ProjectTeamMember[] }>(`/projects/${projectId}/team`),
   create: (values: ProjectFormValues) =>
     request<ProjectResponse>('/projects', {
       method: 'POST',

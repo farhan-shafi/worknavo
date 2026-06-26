@@ -44,6 +44,11 @@ const ProjectsPage = lazy(() =>
     default: module.ProjectsPage,
   })),
 );
+const ProjectTeamsPage = lazy(() =>
+  import('../features/projects/ProjectTeamsPage').then((module) => ({
+    default: module.ProjectTeamsPage,
+  })),
+);
 const InvoicesPage = lazy(() =>
   import('../features/invoices/InvoicesPage').then((module) => ({
     default: module.InvoicesPage,
@@ -120,6 +125,7 @@ export function App() {
             <Route element={<ClientsPage />} path="clients" />
             <Route element={<ClientDetailPage />} path="clients/:clientId" />
             <Route element={<ProjectsPage />} path="projects" />
+            <Route element={<ProjectTeamsPage />} path="project-teams" />
             <Route element={<InvoicesPage />} path="invoices" />
             <Route element={<ReportsPage />} path="reports" />
             <Route element={<WorkLogsPage />} path="work-logs" />

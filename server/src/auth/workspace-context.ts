@@ -51,30 +51,63 @@ export function assertActorPermission(
   }
 }
 
-export async function assignedProjectIds(actor: WorkspaceActor) {
+function allProjectAccess(actor: WorkspaceActor) {
+  return (
+    ['owner', 'admin'].includes(actor.membership.role) ||
+    actorHas(actor, 'worklogs.viewAll') ||
+    actorHas(actor, 'invoices.manage')
+  );
+}
+
+async function activeProjectAssignmentIds(
+  actor: WorkspaceActor,
+  assignmentType?: 'project_manager' | 'contributor',
+) {
+  const now = new Date();
   const assignments = await ProjectAssignmentModel.find({
     organizationId: actor.organization._id,
     membershipId: actor.membership._id,
     active: true,
+    ...(assignmentType ? { assignmentType } : {}),
     $or: [
       { startDate: { $exists: false } },
       { startDate: null },
-      { startDate: { $lte: new Date() } },
+      { startDate: { $lte: now } },
+    ],
+    $and: [
+      {
+        $or: [
+          { endDate: { $exists: false } },
+          { endDate: null },
+          { endDate: { $gte: now } },
+        ],
+      },
     ],
   }).select('projectId');
 
   return assignments.map((assignment) => assignment.projectId);
 }
 
+export async function assignedProjectIds(actor: WorkspaceActor) {
+  return activeProjectAssignmentIds(actor);
+}
+
+export async function managedProjectIds(actor: WorkspaceActor) {
+  return activeProjectAssignmentIds(actor, 'project_manager');
+}
+
 export async function projectVisibilityQuery(
   actor: WorkspaceActor,
 ): Promise<FilterQuery<Project>> {
-  if (
-    actorHas(actor, 'projects.manage') ||
-    actorHas(actor, 'worklogs.viewAll') ||
-    actorHas(actor, 'invoices.manage')
-  ) {
+  if (allProjectAccess(actor)) {
     return { organizationId: actor.organization._id };
+  }
+
+  if (actor.membership.role === 'project_manager') {
+    return {
+      organizationId: actor.organization._id,
+      _id: { $in: await managedProjectIds(actor) },
+    };
   }
 
   return {
@@ -93,7 +126,12 @@ export async function workLogVisibilityQuery(
   if (actorHas(actor, 'worklogs.viewProject')) {
     return {
       organizationId: actor.organization._id,
-      projectId: { $in: await assignedProjectIds(actor) },
+      projectId: {
+        $in:
+          actor.membership.role === 'project_manager'
+            ? await managedProjectIds(actor)
+            : await assignedProjectIds(actor),
+      },
     };
   }
 

@@ -1,14 +1,16 @@
-import { useQuery } from '@tanstack/react-query';
 import {
   ArrowRight,
   BarChart3,
+  BriefcaseBusiness,
   Check,
   CircleDollarSign,
   Clock3,
   FileText,
-  HeartPulse,
   Layers3,
+  ShieldCheck,
   Sparkles,
+  Timer,
+  UserCheck,
   UsersRound,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -16,38 +18,69 @@ import { Link } from 'react-router-dom';
 
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import { api } from '../lib/api-client';
 import { cn } from '../lib/utils';
 
-const workflow = [
+const platformFeatures: Array<{
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}> = [
   {
-    icon: UsersRound,
-    title: 'Keep clients organized',
+    icon: Timer,
+    title: 'Timer and manual logs',
     description:
-      'Contacts, projects, rates, and history in one calm workspace.',
+      'Track live work, add manual entries, and keep one clean timeline per member.',
   },
   {
-    icon: Clock3,
-    title: 'Log work as it happens',
-    description: 'Capture billable hours and the context behind every task.',
+    icon: BriefcaseBusiness,
+    title: 'Projects, clients, categories',
+    description:
+      'Connect every hour to a client, project, category, rate, and billing context.',
+  },
+  {
+    icon: UsersRound,
+    title: 'Team roles that scale',
+    description:
+      'Support owners, admins, project managers, finance users, members, and viewers.',
   },
   {
     icon: FileText,
-    title: 'Generate weekly reports',
-    description: 'Turn selected work logs into client-ready progress updates.',
+    title: 'Reports and invoices',
+    description:
+      'Turn approved billable work into client summaries, PDFs, emails, and invoices.',
   },
   {
-    icon: CircleDollarSign,
-    title: 'Invoice without retyping',
+    icon: BarChart3,
+    title: 'Analytics and CSV export',
     description:
-      'Build polished invoices directly from approved billable work.',
+      'Review member utilization, project hours, billable time, and export team data.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Audit and notifications',
+    description:
+      'Track important workspace changes and show real alerts instead of fake noise.',
   },
 ];
 
+const roleRows = [
+  ['Owner/Admin', 'Full workspace control', 'Team, settings, billing, audit'],
+  ['Project Manager', 'Managed projects only', 'Project team, logs, reports'],
+  ['Finance', 'Billing workspace', 'Invoices, billable time, revenue'],
+  ['Member', 'Personal workspace', 'Own timer, logs, assigned projects'],
+];
+
+const useCases = [
+  'Freelancers growing into teams',
+  'Design and dev agencies',
+  'Consultants billing by the hour',
+  'Finance teams preparing invoices',
+];
+
 const sampleActivity = [
-  ['Dashboard card refactor', 'Reeves & Sons', '3.5h'],
-  ['Responsive layout fixes', 'BrightPixel Studio', '2h'],
-  ['Invoice PDF polish', 'NovaTech AI', '4h'],
+  ['Project kickoff', 'BrightPixel Studio', '2.0h'],
+  ['Landing page build', 'NovaTech AI', '3.75h'],
+  ['Invoice review', 'Reeves & Sons', '1.25h'],
 ];
 
 const dashboardStats: Array<{
@@ -55,10 +88,10 @@ const dashboardStats: Array<{
   value: string;
   icon: LucideIcon;
 }> = [
-  { label: 'Active clients', value: '12', icon: UsersRound },
-  { label: 'Open projects', value: '8', icon: Layers3 },
-  { label: 'Hours this month', value: '86.5', icon: Clock3 },
-  { label: 'Revenue', value: '$12,480', icon: CircleDollarSign },
+  { label: 'Team hours', value: '146.5', icon: Clock3 },
+  { label: 'Managed projects', value: '18', icon: Layers3 },
+  { label: 'Unbilled value', value: '$18.4k', icon: CircleDollarSign },
+  { label: 'Utilization', value: '82%', icon: BarChart3 },
 ];
 
 export function Brand() {
@@ -74,106 +107,59 @@ export function Brand() {
   );
 }
 
-function ApiHealth() {
-  const health = useQuery({
-    queryKey: ['health'],
-    queryFn: api.health,
-    refetchInterval: 30_000,
-  });
-
-  const apiReady = health.isSuccess;
-  const databaseReady = health.data?.database.status === 'connected';
-
+function ProductPreview() {
   return (
-    <div className="flex flex-wrap items-center gap-2 text-xs font-semibold">
-      <span
-        className={cn(
-          'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5',
-          apiReady
-            ? 'border-success/15 bg-success/8 text-success'
-            : 'border-warning/20 bg-warning/10 text-warning-dark',
-        )}
-      >
-        <span
-          className={cn(
-            'size-1.5 rounded-full',
-            apiReady ? 'bg-success' : 'bg-warning animate-pulse',
-          )}
-        />
-        {health.isLoading
-          ? 'Checking API'
-          : apiReady
-            ? 'API online'
-            : 'API offline'}
-      </span>
-      <span
-        className={cn(
-          'inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5',
-          databaseReady
-            ? 'border-success/15 bg-success/8 text-success'
-            : 'border-border text-muted bg-white',
-        )}
-      >
-        <span
-          className={cn(
-            'size-1.5 rounded-full',
-            databaseReady ? 'bg-success' : 'bg-muted/40',
-          )}
-        />
-        MongoDB {databaseReady ? 'connected' : 'waiting'}
-      </span>
-    </div>
-  );
-}
-
-function DashboardPreview() {
-  return (
-    <div className="relative mx-auto mt-16 max-w-6xl">
-      <div className="bg-primary/20 absolute inset-x-[10%] -top-14 h-36 rounded-full blur-3xl" />
-      <Card className="relative overflow-hidden border-white/70 bg-white/90 p-2 shadow-[0_40px_100px_-40px_rgba(113,63,34,0.4)] backdrop-blur">
-        <div className="border-border/80 bg-background flex min-h-[580px] overflow-hidden rounded-2xl border">
-          <aside className="border-border hidden w-56 shrink-0 flex-col border-r bg-white p-5 md:flex">
+    <div className="relative mx-auto mt-14 max-w-6xl">
+      <Card className="relative overflow-hidden border-white/80 bg-white/95 p-2 shadow-[0_40px_100px_-45px_rgba(31,41,55,0.45)]">
+        <div className="border-border/80 bg-background grid min-h-[590px] overflow-hidden rounded-2xl border lg:grid-cols-[240px_minmax(0,1fr)]">
+          <aside className="border-border hidden border-r bg-white p-5 lg:block">
             <Brand />
-            <div className="mt-10 space-y-2">
-              {['Overview', 'Clients', 'Projects', 'Work logs'].map(
-                (item, index) => (
-                  <div
-                    className={cn(
-                      'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
-                      index === 0 ? 'bg-primary text-white' : 'text-muted',
-                    )}
-                    key={item}
-                  >
-                    <span className="size-2 rounded-full bg-current opacity-70" />
-                    {item}
-                  </div>
-                ),
-              )}
+            <div className="mt-9 space-y-2">
+              {[
+                'Overview',
+                'Project Teams',
+                'My Work',
+                'Reports',
+                'Invoices',
+              ].map((item, index) => (
+                <div
+                  className={cn(
+                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold',
+                    index === 0 ? 'bg-primary text-white' : 'text-muted',
+                  )}
+                  key={item}
+                >
+                  <span className="size-2 rounded-full bg-current opacity-70" />
+                  {item}
+                </div>
+              ))}
             </div>
-            <div className="bg-foreground mt-auto rounded-2xl p-4 text-white">
-              <Sparkles className="text-primary-soft size-5" />
-              <p className="mt-3 text-sm font-bold">One clean workflow.</p>
+            <div className="bg-foreground mt-10 rounded-2xl p-4 text-white">
+              <ShieldCheck className="text-primary-soft size-5" />
+              <p className="mt-3 text-sm font-bold">Scoped by role.</p>
               <p className="mt-1 text-xs leading-5 text-white/60">
-                From first log to paid invoice.
+                Members see their own work. Managers see managed projects.
               </p>
             </div>
           </aside>
 
-          <section className="min-w-0 flex-1 p-5 sm:p-8">
-            <div className="flex items-start justify-between gap-4">
+          <section className="min-w-0 p-5 sm:p-8">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-primary text-xs font-bold tracking-[0.16em] uppercase">
-                  Wednesday, June 24
+                  Team operations
                 </p>
                 <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  Good morning, Farhan.
+                  Know what was worked, billed, and delivered.
                 </h2>
                 <p className="text-muted mt-1 text-sm">
-                  Here&apos;s how your client work is moving.
+                  A single dashboard for time, projects, people, and client
+                  billing.
                 </p>
               </div>
-              <div className="bg-primary-soft/50 text-primary grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold">
-                FS
+              <div className="border-success/15 bg-success/8 text-success inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold">
+                <span className="bg-success size-1.5 rounded-full" />
+                Live workspace
               </div>
             </div>
 
@@ -190,26 +176,31 @@ function DashboardPreview() {
                     {value}
                   </p>
                   <p className="text-success mt-1 text-[11px] font-semibold">
-                    +12% from last month
+                    Updated from live work logs
                   </p>
                 </Card>
               ))}
             </div>
 
-            <div className="mt-3 grid gap-3 xl:grid-cols-[1.2fr_0.8fr]">
+            <div className="mt-3 grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
               <Card className="p-5">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="font-bold">Revenue overview</p>
-                    <p className="text-muted text-xs">Last six months</p>
+                    <p className="font-bold">Billable trend</p>
+                    <p className="text-muted text-xs">Hours by week</p>
                   </div>
                   <BarChart3 className="text-primary size-5" />
                 </div>
                 <div className="mt-8 flex h-48 items-end gap-3">
-                  {[42, 58, 48, 72, 63, 92, 78, 100, 84, 115, 105, 132].map(
+                  {[38, 54, 48, 70, 64, 82, 76, 100, 86, 118, 108, 132].map(
                     (height, index) => (
                       <div
-                        className="bg-primary/15 hover:bg-primary flex-1 rounded-t-md transition-colors"
+                        className={cn(
+                          'flex-1 rounded-t-md transition-colors',
+                          index > 8
+                            ? 'bg-primary hover:bg-primary-hover'
+                            : 'bg-primary/18 hover:bg-primary/40',
+                        )}
                         key={index}
                         style={{ height }}
                       />
@@ -222,7 +213,7 @@ function DashboardPreview() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-bold">Recent work</p>
-                    <p className="text-muted text-xs">Today</p>
+                    <p className="text-muted text-xs">Ready for reports</p>
                   </div>
                   <span className="text-primary text-xs font-bold">
                     View all
@@ -254,30 +245,45 @@ function DashboardPreview() {
   );
 }
 
+function SectionIntro({
+  eyebrow,
+  title,
+  description,
+}: {
+  eyebrow: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="mx-auto max-w-3xl text-center">
+      <p className="text-primary text-xs font-extrabold tracking-[0.18em] uppercase">
+        {eyebrow}
+      </p>
+      <h2 className="mt-4 text-3xl font-extrabold tracking-[-0.04em] text-balance sm:text-5xl">
+        {title}
+      </h2>
+      <p className="text-muted mx-auto mt-5 max-w-2xl text-base leading-7 text-balance">
+        {description}
+      </p>
+    </div>
+  );
+}
+
 export function LandingPage() {
   return (
     <div className="bg-background text-foreground min-h-screen overflow-hidden">
-      <header className="border-border/70 bg-background/80 relative z-20 border-b backdrop-blur-xl">
+      <header className="border-border/70 bg-background/88 sticky top-0 z-20 border-b backdrop-blur-xl">
         <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-5 lg:px-8">
           <Brand />
           <nav className="text-muted hidden items-center gap-8 text-sm font-semibold md:flex">
-            <a
-              className="hover:text-foreground transition-colors"
-              href="#features"
-            >
+            <a className="hover:text-foreground transition" href="#features">
               Features
             </a>
-            <a
-              className="hover:text-foreground transition-colors"
-              href="#workflow"
-            >
-              How it works
+            <a className="hover:text-foreground transition" href="#teams">
+              Teams
             </a>
-            <a
-              className="hover:text-foreground transition-colors"
-              href="#setup"
-            >
-              Setup
+            <a className="hover:text-foreground transition" href="#setup">
+              Get started
             </a>
           </nav>
           <div className="flex items-center gap-2">
@@ -294,86 +300,60 @@ export function LandingPage() {
       </header>
 
       <main>
-        <section className="relative px-5 pt-20 pb-20 lg:px-8 lg:pt-28">
-          <div className="bg-primary-soft/40 pointer-events-none absolute top-16 left-[-8rem] size-72 rounded-full blur-3xl" />
-          <div className="pointer-events-none absolute top-40 right-[-10rem] size-96 rounded-full bg-[#f4d4a9]/30 blur-3xl" />
+        <section className="relative px-5 pt-18 pb-20 lg:px-8 lg:pt-24">
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-[560px] bg-[linear-gradient(135deg,#fff7ee_0%,#ffffff_48%,#e9f6f0_100%)]" />
           <div className="relative mx-auto max-w-4xl text-center">
             <div className="border-primary/15 text-primary mx-auto mb-7 inline-flex items-center gap-2 rounded-full border bg-white px-4 py-2 text-xs font-bold shadow-sm">
               <Sparkles className="size-3.5" />
-              Built for focused client work
+              Time tracking, teams, reports, and billing
             </div>
             <h1 className="text-5xl leading-[0.98] font-extrabold tracking-[-0.055em] text-balance sm:text-6xl lg:text-7xl">
-              Turn work logs into
-              <span className="text-primary relative mx-3 inline-block">
-                client-ready
-                <svg
-                  aria-hidden="true"
-                  className="text-primary-soft absolute -bottom-3 left-0 w-full"
-                  fill="none"
-                  viewBox="0 0 310 18"
-                >
-                  <path
-                    d="M3 14C72 3 171 2 307 8"
-                    stroke="currentColor"
-                    strokeLinecap="round"
-                    strokeWidth="7"
-                  />
-                </svg>
-              </span>
-              reports and invoices.
+              Run client work from timer to paid invoice.
             </h1>
             <p className="text-muted mx-auto mt-8 max-w-2xl text-base leading-7 text-balance sm:text-lg">
-              ClientFlow gives freelancers and small agencies one polished place
-              to manage projects, track billable work, send weekly updates, and
-              get paid.
+              ClientFlow helps freelancers and small service teams track work,
+              control role visibility, review project activity, generate
+              reports, and invoice without rebuilding the same data twice.
             </p>
             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild size="lg">
                 <Link to="/register">
-                  Build your workflow <ArrowRight className="size-4" />
+                  Create workspace <ArrowRight className="size-4" />
                 </Link>
               </Button>
               <Button asChild size="lg" variant="secondary">
-                <a href="#workflow">Explore the demo</a>
+                <a href="#features">See features</a>
               </Button>
             </div>
+            <div className="text-muted mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-bold">
+              <span>Solo or company workspaces</span>
+              <span>Role-based access</span>
+              <span>PDF reports and invoices</span>
+            </div>
           </div>
-          <DashboardPreview />
+          <ProductPreview />
         </section>
 
         <section
           className="border-border border-y bg-white px-5 py-24 lg:px-8"
-          id="workflow"
+          id="features"
         >
           <div className="mx-auto max-w-7xl">
-            <div className="max-w-2xl">
-              <p className="text-primary text-xs font-extrabold tracking-[0.18em] uppercase">
-                A smoother Friday
-              </p>
-              <h2 className="mt-4 text-4xl font-extrabold tracking-[-0.04em] sm:text-5xl">
-                Log it once. Use it everywhere.
-              </h2>
-              <p className="text-muted mt-5 text-base leading-7">
-                No more rebuilding the same story across notes, status emails,
-                and spreadsheets.
-              </p>
-            </div>
-            <div
-              className="mt-14 grid gap-4 md:grid-cols-2 xl:grid-cols-4"
-              id="features"
-            >
-              {workflow.map(({ description, icon: Icon, title }, index) => (
+            <SectionIntro
+              description="A Clockify-style feature set shaped for client-facing service work: simple time capture, scoped teams, billing, reporting, and operational analytics."
+              eyebrow="Feature platform"
+              title="Everything your team needs before the invoice."
+            />
+            <div className="mt-14 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {platformFeatures.map(({ description, icon: Icon, title }) => (
                 <Card
-                  className="group hover:border-primary/20 relative overflow-hidden p-6 transition-all hover:-translate-y-1 hover:shadow-xl"
+                  className="group hover:border-primary/20 p-6 transition-all hover:-translate-y-1 hover:shadow-xl"
                   key={title}
                 >
-                  <span className="text-surface-strong absolute top-4 right-5 text-5xl font-black">
-                    0{index + 1}
-                  </span>
-                  <span className="bg-primary-soft/45 text-primary grid size-12 place-items-center rounded-2xl transition-transform group-hover:scale-105 group-hover:rotate-3">
+                  <span className="bg-primary-soft/45 text-primary grid size-12 place-items-center rounded-2xl transition-transform group-hover:scale-105">
                     <Icon className="size-5" />
                   </span>
-                  <h3 className="mt-8 text-lg font-extrabold">{title}</h3>
+                  <h3 className="mt-7 text-lg font-extrabold">{title}</h3>
                   <p className="text-muted mt-3 text-sm leading-6">
                     {description}
                   </p>
@@ -383,26 +363,97 @@ export function LandingPage() {
           </div>
         </section>
 
+        <section className="px-5 py-24 lg:px-8" id="teams">
+          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+            <div>
+              <p className="text-primary text-xs font-extrabold tracking-[0.18em] uppercase">
+                Role routing
+              </p>
+              <h2 className="mt-4 text-3xl font-extrabold tracking-[-0.04em] text-balance sm:text-5xl">
+                Give every role the right workspace, not the whole company.
+              </h2>
+              <p className="text-muted mt-5 text-base leading-7">
+                The product is being shaped around business-safe visibility:
+                owners see everything, project managers see managed projects,
+                finance sees billing, and members see their own work.
+              </p>
+              <div className="mt-8 flex flex-wrap gap-3">
+                {useCases.map((item) => (
+                  <span
+                    className="border-border rounded-full border bg-white px-4 py-2 text-xs font-bold"
+                    key={item}
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <Card className="overflow-hidden">
+              <div className="border-border text-muted grid grid-cols-[1fr_1fr_1fr] border-b bg-white px-5 py-3 text-xs font-extrabold">
+                <span>Role</span>
+                <span>Scope</span>
+                <span>Focus</span>
+              </div>
+              <div className="divide-border divide-y bg-white">
+                {roleRows.map(([role, scope, focus]) => (
+                  <div
+                    className="grid gap-3 px-5 py-4 text-sm sm:grid-cols-[1fr_1fr_1fr]"
+                    key={role}
+                  >
+                    <div className="font-extrabold">{role}</div>
+                    <div className="text-muted">{scope}</div>
+                    <div className="text-muted">{focus}</div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </section>
+
         <section className="px-5 py-20 lg:px-8" id="setup">
-          <Card className="bg-foreground mx-auto flex max-w-7xl flex-col gap-8 overflow-hidden p-8 text-white sm:p-12 lg:flex-row lg:items-center lg:justify-between">
+          <Card className="bg-foreground mx-auto grid max-w-7xl gap-8 overflow-hidden p-8 text-white sm:p-12 lg:grid-cols-[1fr_340px] lg:items-center">
             <div className="max-w-2xl">
               <div className="text-primary-soft flex items-center gap-2 text-sm font-bold">
-                <HeartPulse className="size-5" />
-                Phase 2 is live
+                <UserCheck className="size-5" />
+                Ready for client-facing teams
               </div>
               <h2 className="mt-4 text-3xl font-extrabold tracking-tight sm:text-4xl">
-                Your secure workspace is ready.
+                Bring your client work into one clear workspace.
               </h2>
               <p className="mt-4 leading-7 text-white/60">
-                Create an account, sign in securely, and return to the same
-                protected workspace whenever you&apos;re ready to work.
+                Invite your team, assign projects, track work, send reports, and
+                prepare invoices from the same trusted data.
               </p>
+              <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+                <Button asChild>
+                  <Link to="/register">
+                    Start free <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+                <Button asChild variant="secondary">
+                  <Link to="/login">Log in</Link>
+                </Button>
+              </div>
             </div>
-            <div className="text-foreground shrink-0 rounded-2xl bg-white p-5">
-              <p className="text-muted mb-3 text-xs font-bold tracking-[0.16em] uppercase">
-                Live services
+            <div className="text-foreground rounded-2xl bg-white p-5">
+              <p className="text-muted mb-4 text-xs font-bold tracking-[0.16em] uppercase">
+                What you get
               </p>
-              <ApiHealth />
+              <div className="space-y-3 text-sm font-bold">
+                {[
+                  'Team time tracking',
+                  'Project roles and visibility',
+                  'Client reports and PDF invoices',
+                ].map((item) => (
+                  <div className="flex items-center gap-3" key={item}>
+                    <span className="bg-success/10 text-success grid size-7 place-items-center rounded-full">
+                      <Check className="size-4" />
+                    </span>
+                    {item}
+                  </div>
+                ))}
+              </div>
             </div>
           </Card>
         </section>

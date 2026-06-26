@@ -26,6 +26,7 @@ export type MembershipRole =
 export type MembershipStatus = 'active' | 'suspended';
 export type Permission =
   | 'members.view'
+  | 'members.viewProject'
   | 'members.manage'
   | 'members.invite'
   | 'clients.view'

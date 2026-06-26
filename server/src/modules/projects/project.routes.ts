@@ -9,6 +9,8 @@ import {
 import { ProjectAssignmentModel } from '../../models/ProjectAssignment.model.js';
 import { ProjectModel } from '../../models/Project.model.js';
 import { OrganizationMembershipModel } from '../../models/OrganizationMembership.model.js';
+import { UserModel } from '../../models/User.model.js';
+import { WorkLogModel } from '../../models/WorkLog.model.js';
 import { ApiError } from '../../utils/api-error.js';
 import { recordAudit } from '../audit/audit.service.js';
 import { NotificationModel } from '../../models/Notification.model.js';
@@ -29,13 +31,118 @@ const projectAssignmentInputSchema = z.object({
   categoryIds: z.array(z.string().trim().min(1)).default([]),
 });
 
+function startOfWeek(date: Date) {
+  const start = new Date(date);
+  start.setDate(date.getDate() - ((date.getDay() + 6) % 7));
+  start.setHours(0, 0, 0, 0);
+  return start;
+}
+
+function activeAssignmentWindow(date = new Date()) {
+  return {
+    active: true,
+    $or: [
+      { startDate: { $exists: false } },
+      { startDate: null },
+      { startDate: { $lte: date } },
+    ],
+    $and: [
+      {
+        $or: [
+          { endDate: { $exists: false } },
+          { endDate: null },
+          { endDate: { $gte: date } },
+        ],
+      },
+    ],
+  };
+}
+
 projectRouter.use(requireAuth);
 projectRouter.route('/').get(listProjects).post(createProject);
+projectRouter.get('/:id/team', async (request, response) => {
+  const actor = workspaceActor(request);
+  if (
+    !actor.permissions.includes('members.view') &&
+    !actor.permissions.includes('members.viewProject')
+  ) {
+    throw new ApiError(403, 'You cannot view project team members.');
+  }
+  const project = await ProjectModel.findOne({
+    _id: request.params.id,
+    ...(await projectVisibilityQuery(actor)),
+  }).select('_id');
+  if (!project) throw new ApiError(404, 'Project not found.');
+
+  const assignments = await ProjectAssignmentModel.find({
+    organizationId: actor.organization._id,
+    projectId: request.params.id,
+    ...activeAssignmentWindow(),
+  }).sort({ assignmentType: 1, createdAt: 1 });
+  const membershipIds = assignments.map(
+    (assignment) => assignment.membershipId,
+  );
+  const [memberships, hours] = await Promise.all([
+    OrganizationMembershipModel.find({
+      _id: { $in: membershipIds },
+      organizationId: actor.organization._id,
+    }),
+    WorkLogModel.aggregate<{ _id: unknown; hours: number }>([
+      {
+        $match: {
+          organizationId: actor.organization._id,
+          projectId: project._id,
+          membershipId: { $in: membershipIds },
+          status: 'completed',
+          workDate: { $gte: startOfWeek(new Date()) },
+        },
+      },
+      { $group: { _id: '$membershipId', hours: { $sum: '$durationHours' } } },
+    ]),
+  ]);
+  const users = await UserModel.find({
+    _id: { $in: memberships.map((membership) => membership.userId) },
+  });
+  const membershipById = new Map(
+    memberships.map((membership) => [membership._id.toString(), membership]),
+  );
+  const userById = new Map(users.map((user) => [user._id.toString(), user]));
+  const hoursByMembershipId = new Map(
+    hours.map((row) => [String(row._id), row.hours]),
+  );
+
+  response.json({
+    members: assignments.flatMap((assignment) => {
+      const membership = membershipById.get(assignment.membershipId.toString());
+      if (!membership) return [];
+      const user = userById.get(membership.userId.toString());
+      return [
+        {
+          membershipId: membership._id.toString(),
+          userId: membership.userId.toString(),
+          name: user?.name ?? 'Former member',
+          avatarUrl: user?.avatarUrl ?? null,
+          jobTitle: membership.jobTitle ?? null,
+          role: membership.role,
+          assignmentType: assignment.assignmentType,
+          categoryIds: assignment.categoryIds.map((categoryId) =>
+            categoryId.toString(),
+          ),
+          weeklyCapacity: membership.weeklyCapacity,
+          status: membership.status,
+          projectHoursThisWeek:
+            hoursByMembershipId.get(membership._id.toString()) ?? 0,
+        },
+      ];
+    }),
+  });
+});
 projectRouter.get('/:id/assignments', async (request, response) => {
   const actor = workspaceActor(request);
   if (
     !actor.permissions.includes('projects.assign') &&
-    !actor.permissions.includes('members.view')
+    !actor.permissions.includes('members.view') &&
+    !actor.permissions.includes('members.viewProject')
   ) {
     throw new ApiError(403, 'You cannot view project assignments.');
   }
@@ -47,7 +154,7 @@ projectRouter.get('/:id/assignments', async (request, response) => {
   const assignments = await ProjectAssignmentModel.find({
     organizationId: actor.organization._id,
     projectId: request.params.id,
-    active: true,
+    ...activeAssignmentWindow(),
   });
   response.json({
     assignments: assignments.map((assignment) => ({

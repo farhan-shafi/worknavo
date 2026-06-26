@@ -2,6 +2,7 @@ import type { MembershipRole, Permission } from '@clientflow/shared';
 
 export const allPermissions: Permission[] = [
   'members.view',
+  'members.viewProject',
   'members.manage',
   'members.invite',
   'clients.view',
@@ -30,11 +31,10 @@ const rolePermissions: Record<MembershipRole, Permission[]> = {
   owner: allPermissions,
   admin: allPermissions,
   project_manager: [
-    'members.view',
+    'members.viewProject',
     'clients.view',
     'projects.view',
     'projects.manage',
-    'projects.assign',
     'worklogs.createOwn',
     'worklogs.viewOwn',
     'worklogs.editOwn',

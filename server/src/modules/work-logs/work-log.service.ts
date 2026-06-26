@@ -100,7 +100,7 @@ async function requireAssignedProject(
   }
 
   if (
-    !actorHas(actor, 'projects.manage') &&
+    !['owner', 'admin'].includes(actor.membership.role) &&
     !actorHas(actor, 'worklogs.viewAll')
   ) {
     const projectIds = await assignedProjectIds(actor);

@@ -30,6 +30,17 @@ const roles: Array<Exclude<MembershipRole, 'owner'>> = [
   'viewer',
 ];
 
+const defaultRoleNames = [
+  'Designer',
+  'Developer',
+  'QA Engineer',
+  'Content Writer',
+  'Finance Lead',
+  'Marketing Specialist',
+  'Account Manager',
+  'Operations Lead',
+];
+
 function roleLabel(role: MembershipRole) {
   return role
     .replace('_', ' ')
@@ -43,6 +54,7 @@ export function TeamPage() {
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState<Exclude<MembershipRole, 'owner'>>('member');
+  const [jobTitle, setJobTitle] = useState('');
   const [mode, setMode] = useState<'email' | 'admin_created'>('email');
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
   const projects = useQuery({
@@ -68,6 +80,14 @@ export function TeamPage() {
     queryFn: teamApi.invitations,
     enabled: auth.permissions.includes('members.invite'),
   });
+  const roleNameOptions = [
+    ...new Set([
+      ...defaultRoleNames,
+      ...((members.data?.members ?? [])
+        .map((member) => member.jobTitle)
+        .filter(Boolean) as string[]),
+    ]),
+  ];
   const invite = useMutation({
     mutationFn: teamApi.invite,
     onSuccess: (result) => {
@@ -81,6 +101,7 @@ export function TeamPage() {
       setOpen(false);
       setEmail('');
       setName('');
+      setJobTitle('');
       queryClient.invalidateQueries({ queryKey: ['members'] });
       queryClient.invalidateQueries({ queryKey: ['invitations'] });
     },
@@ -150,6 +171,7 @@ export function TeamPage() {
                       email,
                       name: name || undefined,
                       role,
+                      jobTitle: jobTitle || undefined,
                       mode,
                       projectIds: [],
                       permissionOverrides: { allow: [], deny: [] },
@@ -178,10 +200,21 @@ export function TeamPage() {
                       />
                     </div>
                   ) : null}
+                  <div>
+                    <label className="mb-2 block text-sm font-bold">
+                      Role name
+                    </label>
+                    <Input
+                      list="team-role-name-options"
+                      onChange={(event) => setJobTitle(event.target.value)}
+                      placeholder="Designer, Developer, QA Engineer..."
+                      value={jobTitle}
+                    />
+                  </div>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <label className="mb-2 block text-sm font-bold">
-                        Role
+                        Access role
                       </label>
                       <Select
                         onChange={(event) =>
@@ -233,10 +266,15 @@ export function TeamPage() {
             </Dialog>
           ) : null
         }
-        description="Invite people, assign operational roles, and control workspace access."
+        description="Invite people, add custom role names, and control workspace access."
         eyebrow={auth.organization?.name ?? 'Workspace'}
         title="Team"
       />
+      <datalist id="team-role-name-options">
+        {roleNameOptions.map((option) => (
+          <option key={option} value={option} />
+        ))}
+      </datalist>
 
       {members.data?.members.length ? (
         <div className="border-border overflow-hidden rounded-2xl border bg-white">
@@ -349,6 +387,7 @@ export function TeamPage() {
         member={editingMember}
         onClose={() => setEditingMember(null)}
         projects={projects.data?.projects ?? []}
+        roleNameOptions={roleNameOptions}
       />
     </div>
   );
@@ -356,6 +395,7 @@ export function TeamPage() {
 
 const permissionOptions: Permission[] = [
   'members.view',
+  'members.viewProject',
   'members.manage',
   'members.invite',
   'clients.view',
@@ -385,11 +425,13 @@ function MemberEditor({
   member,
   onClose,
   projects,
+  roleNameOptions,
 }: {
   categories: Array<{ id: string; name: string; active: boolean }>;
   member: TeamMember | null;
   onClose: () => void;
   projects: Project[];
+  roleNameOptions: string[];
 }) {
   const queryClient = useQueryClient();
   const [role, setRole] = useState<Exclude<MembershipRole, 'owner'>>('member');
@@ -456,7 +498,9 @@ function MemberEditor({
         <div className="mt-5 space-y-5">
           <div className="grid gap-4 sm:grid-cols-3">
             <div>
-              <label className="mb-2 block text-sm font-bold">Role</label>
+              <label className="mb-2 block text-sm font-bold">
+                Access role
+              </label>
               <Select
                 onChange={(event) =>
                   setRole(
@@ -473,11 +517,18 @@ function MemberEditor({
               </Select>
             </div>
             <div>
-              <label className="mb-2 block text-sm font-bold">Job title</label>
+              <label className="mb-2 block text-sm font-bold">Role name</label>
               <Input
+                list="member-role-name-options"
                 onChange={(event) => setJobTitle(event.target.value)}
+                placeholder="Designer, Developer, QA Engineer..."
                 value={jobTitle}
               />
+              <datalist id="member-role-name-options">
+                {roleNameOptions.map((option) => (
+                  <option key={option} value={option} />
+                ))}
+              </datalist>
             </div>
             <div>
               <label className="mb-2 block text-sm font-bold">

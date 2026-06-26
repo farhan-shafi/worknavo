@@ -10,6 +10,8 @@ export const projectQueryKeys = {
     [...projectQueryKeys.all, 'client', clientId] as const,
   detail: (projectId: string) =>
     [...projectQueryKeys.all, 'detail', projectId] as const,
+  team: (projectId: string) =>
+    [...projectQueryKeys.all, 'team', projectId] as const,
 };
 
 export function useProjects(filters: ProjectFilters) {
@@ -24,5 +26,13 @@ export function useClientProjects(clientId: string) {
     queryKey: projectQueryKeys.forClient(clientId),
     queryFn: () => projectApi.forClient(clientId),
     enabled: Boolean(clientId),
+  });
+}
+
+export function useProjectTeam(projectId: string, enabled: boolean) {
+  return useQuery({
+    queryKey: projectQueryKeys.team(projectId),
+    queryFn: () => projectApi.team(projectId),
+    enabled: enabled && Boolean(projectId),
   });
 }

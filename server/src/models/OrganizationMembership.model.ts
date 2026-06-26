@@ -26,6 +26,7 @@ export type OrganizationMembershipDocument =
 
 const permissionValues: Permission[] = [
   'members.view',
+  'members.viewProject',
   'members.manage',
   'members.invite',
   'clients.view',
