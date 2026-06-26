@@ -14,6 +14,11 @@ const ForgotPasswordPage = lazy(() =>
     default: module.ForgotPasswordPage,
   })),
 );
+const ResetPasswordPage = lazy(() =>
+  import('../features/auth/ResetPasswordPage').then((module) => ({
+    default: module.ResetPasswordPage,
+  })),
+);
 const LoginPage = lazy(() =>
   import('../features/auth/LoginPage').then((module) => ({
     default: module.LoginPage,
@@ -113,6 +118,7 @@ export function App() {
         <Route element={<LoginPage />} path="/login" />
         <Route element={<RegisterPage />} path="/register" />
         <Route element={<ForgotPasswordPage />} path="/forgot-password" />
+        <Route element={<ResetPasswordPage />} path="/reset-password" />
         <Route element={<AcceptInvitationPage />} path="/accept-invitation" />
 
         <Route element={<ProtectedRoute />}>

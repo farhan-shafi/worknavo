@@ -1,3 +1,5 @@
+import { createHash, randomBytes } from 'node:crypto';
+
 import bcrypt from 'bcryptjs';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
 
@@ -15,12 +17,15 @@ import {
 import type {
   LoginInput,
   RegisterInput,
+  ResetPasswordInput,
   UpdateSettingsInput,
 } from './auth.validation.js';
+import { sendPasswordResetEmail } from '../email/email.service.js';
 
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const REMEMBERED_REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
+const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
 
 interface TokenPayload extends JwtPayload {
   sub: string;
@@ -66,6 +71,10 @@ function verifyToken(token: string, type: TokenPayload['type']) {
   return payload as TokenPayload;
 }
 
+function hashPasswordResetToken(token: string) {
+  return createHash('sha256').update(token).digest('hex');
+}
+
 export async function registerUser(input: RegisterInput) {
   const existingUser = await UserModel.exists({ email: input.email });
 
@@ -104,6 +113,54 @@ export async function loginUser(input: LoginInput) {
     user,
     publicUser: toAuthUser(user),
   };
+}
+
+export async function requestPasswordReset(email: string) {
+  const user = await UserModel.findOne({ email }).select(
+    '+passwordResetTokenHash +passwordResetExpiresAt',
+  );
+
+  if (!user) {
+    return;
+  }
+
+  const token = randomBytes(32).toString('hex');
+  user.passwordResetTokenHash = hashPasswordResetToken(token);
+  user.passwordResetExpiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
+  await user.save();
+
+  try {
+    await sendPasswordResetEmail({
+      recipient: user.email,
+      recipientName: user.name,
+      resetUrl: `${env.CLIENT_URL}/reset-password?token=${token}`,
+    });
+  } catch (error) {
+    user.passwordResetTokenHash = undefined;
+    user.passwordResetExpiresAt = undefined;
+    await user.save();
+    throw error;
+  }
+}
+
+export async function resetUserPassword(input: ResetPasswordInput) {
+  const user = await UserModel.findOne({
+    passwordResetTokenHash: hashPasswordResetToken(input.token),
+    passwordResetExpiresAt: { $gt: new Date() },
+  }).select('+passwordHash +passwordResetTokenHash +passwordResetExpiresAt');
+
+  if (!user) {
+    throw new ApiError(
+      400,
+      'This password reset link is invalid or expired. Request a new reset link.',
+    );
+  }
+
+  user.passwordHash = await bcrypt.hash(input.password, 12);
+  user.passwordResetTokenHash = undefined;
+  user.passwordResetExpiresAt = undefined;
+  user.forcePasswordChange = false;
+  await user.save();
 }
 
 export function createSessionTokens(

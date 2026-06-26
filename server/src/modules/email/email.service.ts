@@ -146,3 +146,21 @@ export async function sendWorkspaceInvitationEmail(input: {
     html: `<p><strong>${input.inviterName}</strong> invited you to join <strong>${input.organizationName}</strong>.</p><p><a href="${input.acceptUrl}">Accept invitation</a></p><p>This link expires in 7 days.</p>`,
   });
 }
+
+export async function sendPasswordResetEmail(input: {
+  recipient: string;
+  recipientName: string;
+  resetUrl: string;
+}) {
+  const { fromAddress, transporter } = smtpConfiguration();
+  await transporter.sendMail({
+    from: {
+      name: env.SMTP_FROM_NAME,
+      address: fromAddress,
+    },
+    to: input.recipient,
+    subject: 'Reset your ClientFlow password',
+    text: `Hi ${input.recipientName},\n\nUse this link to reset your ClientFlow password:\n${input.resetUrl}\n\nThis link expires in 1 hour. If you did not request it, you can ignore this email.`,
+    html: `<p>Hi ${input.recipientName},</p><p>Use this link to reset your ClientFlow password:</p><p><a href="${input.resetUrl}">Reset password</a></p><p>This link expires in 1 hour. If you did not request it, you can ignore this email.</p>`,
+  });
+}

@@ -12,6 +12,7 @@ import {
   me,
   refresh,
   register,
+  resetPassword,
   switchOrganization,
   updateSettings,
   replaceTemporaryPassword,
@@ -32,3 +33,4 @@ authRouter.post(
 );
 authRouter.post('/switch-organization', requireAuth, switchOrganization);
 authRouter.post('/forgot-password', passwordResetRateLimit, forgotPassword);
+authRouter.post('/reset-password', passwordResetRateLimit, resetPassword);

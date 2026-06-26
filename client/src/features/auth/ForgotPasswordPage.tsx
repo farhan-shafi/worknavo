@@ -77,8 +77,7 @@ export function ForgotPasswordPage() {
             Send reset instructions
           </Button>
           <p className="text-muted text-center text-xs leading-5">
-            Password reset delivery will use your configured SMTP provider. For
-            now, contact the workspace administrator if you are locked out.
+            We will email a secure reset link if the account exists.
           </p>
         </form>
       )}

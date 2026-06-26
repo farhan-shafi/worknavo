@@ -52,6 +52,11 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ email }),
     }),
+  resetPassword: (payload: { token: string; password: string }) =>
+    request<MessageResponse>('/auth/reset-password', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
   updateSettings: (payload: SettingsPayload) =>
     request<AuthResponse>('/auth/settings', {
       method: 'PATCH',

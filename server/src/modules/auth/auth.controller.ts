@@ -13,6 +13,8 @@ import {
   getUserFromRefreshToken,
   loginUser,
   registerUser,
+  requestPasswordReset,
+  resetUserPassword,
   switchUserOrganization,
   updateUserSettings,
 } from './auth.service.js';
@@ -20,6 +22,7 @@ import {
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resetPasswordSchema,
   switchOrganizationSchema,
   updateSettingsSchema,
 } from './auth.validation.js';
@@ -177,13 +180,23 @@ export async function switchOrganization(request: Request, response: Response) {
   response.status(200).json(body);
 }
 
-export function forgotPassword(request: Request, response: Response) {
-  forgotPasswordSchema.parse(request.body);
+export async function forgotPassword(request: Request, response: Response) {
+  const input = forgotPasswordSchema.parse(request.body);
+  await requestPasswordReset(input.email);
   const body: MessageResponse = {
     message:
-      'If an account exists for that email, password reset instructions will be sent when email delivery is enabled.',
+      'If an account exists for that email, password reset instructions have been sent.',
   };
   response.status(202).json(body);
+}
+
+export async function resetPassword(request: Request, response: Response) {
+  const input = resetPasswordSchema.parse(request.body);
+  await resetUserPassword(input);
+  const body: MessageResponse = {
+    message: 'Your password has been reset. You can now log in.',
+  };
+  response.status(200).json(body);
 }
 
 export async function updateSettings(request: Request, response: Response) {

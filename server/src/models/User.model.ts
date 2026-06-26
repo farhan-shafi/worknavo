@@ -15,6 +15,8 @@ export interface User {
   defaultInvoiceNotes?: string;
   lastActiveOrganizationId?: Types.ObjectId;
   forcePasswordChange: boolean;
+  passwordResetTokenHash?: string;
+  passwordResetExpiresAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -88,6 +90,15 @@ const userSchema = new Schema<User>(
       ref: 'Organization',
     },
     forcePasswordChange: { type: Boolean, default: false },
+    passwordResetTokenHash: {
+      type: String,
+      select: false,
+      index: true,
+    },
+    passwordResetExpiresAt: {
+      type: Date,
+      select: false,
+    },
   },
   {
     timestamps: true,
