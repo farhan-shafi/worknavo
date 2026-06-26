@@ -34,7 +34,7 @@ function cookieOptions(maxAge: number): CookieOptions {
   return {
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
     path: '/',
     maxAge,
   };
@@ -60,7 +60,7 @@ function clearSessionCookies(response: Response) {
   const options: CookieOptions = {
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
     path: '/',
   };
 
