@@ -1,3 +1,7 @@
+import { existsSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express from 'express';
@@ -20,6 +24,12 @@ import { memberRouter } from './modules/members/member.routes.js';
 import { categoryRouter } from './modules/categories/category.routes.js';
 import { invitationRouter } from './modules/invitations/invitation.routes.js';
 import { analyticsRouter } from './modules/analytics/analytics.routes.js';
+
+const currentDirectory = dirname(fileURLToPath(import.meta.url));
+const clientDistPath = join(currentDirectory, '../../client/dist');
+const clientIndexPath = join(clientDistPath, 'index.html');
+const shouldServeClient =
+  env.NODE_ENV === 'production' && existsSync(clientIndexPath);
 
 export const app = express();
 
@@ -57,6 +67,13 @@ app.use('/api/invoices', invoiceRouter);
 app.use('/api/reports', reportRouter);
 app.use('/api/projects', projectRouter);
 app.use('/api/work-logs', workLogRouter);
+
+if (shouldServeClient) {
+  app.use(express.static(clientDistPath, { index: false }));
+  app.get(/^(?!\/api(?:\/|$)).*/, (_request, response) => {
+    response.sendFile(clientIndexPath);
+  });
+}
 
 app.use(notFoundHandler);
 app.use(errorHandler);
