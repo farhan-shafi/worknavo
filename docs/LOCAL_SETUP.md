@@ -51,6 +51,7 @@ MONGO_URI=mongodb+srv://<username>:<password>@<cluster>/<database>
 JWT_ACCESS_SECRET=replace-with-at-least-32-random-characters
 JWT_REFRESH_SECRET=replace-with-a-different-32-character-secret
 CLIENT_URL=http://localhost:5173
+RESEND_API_KEY=
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_SECURE=false
@@ -60,8 +61,9 @@ SMTP_FROM=
 SMTP_FROM_NAME=ClientFlow
 ```
 
-If you want email delivery to work locally, fill in the SMTP values with a real
-mail provider or a testing inbox service.
+If you want email delivery to work locally, either add `RESEND_API_KEY` plus
+`SMTP_FROM`, or fill in the SMTP values with a real mail provider/testing inbox
+service. When `RESEND_API_KEY` is present, SMTP host/user/password are not used.
 
 ### `client/.env`
 

@@ -277,7 +277,7 @@ Report and invoice email buttons:
 1. Load the owned document and client.
 2. Generate the PDF in memory.
 3. Build an HTML and plain-text email.
-4. Send it through the configured SMTP provider.
+4. Send it through Resend direct API when configured, otherwise through SMTP.
 5. Attach the generated PDF.
 6. Record success or failure in the `emaillogs` collection.
 
@@ -288,8 +288,8 @@ POST /api/reports/:id/send-email
 POST /api/invoices/:id/send-email
 ```
 
-SMTP passwords are read only from `server/.env`; they are never stored in
-MongoDB.
+Email provider secrets are read only from `server/.env`; they are never stored
+in MongoDB.
 
 ## Environment variables
 
@@ -303,13 +303,16 @@ JWT_ACCESS_SECRET=replace-with-at-least-32-random-characters
 JWT_REFRESH_SECRET=replace-with-a-different-32-character-secret
 CLIENT_URL=http://localhost:5173
 
-SMTP_HOST=smtp.gmail.com
+RESEND_API_KEY=re_your_resend_api_key
+SMTP_FROM=onboarding@resend.dev
+SMTP_FROM_NAME=Your Business Name
+
+# Optional SMTP fallback. Not needed when RESEND_API_KEY is set.
+SMTP_HOST=
 SMTP_PORT=587
 SMTP_SECURE=false
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-16-character-google-app-password
-SMTP_FROM=your-email@gmail.com
-SMTP_FROM_NAME=Your Business Name
+SMTP_USER=
+SMTP_PASS=
 ```
 
 Create `client/.env`:
@@ -318,13 +321,14 @@ Create `client/.env`:
 VITE_API_URL=/api
 ```
 
-### Email setup with Gmail
+### Email setup with Resend
 
-1. Enable two-step verification on the Google account.
-2. Create a Google App Password.
-3. Put that 16-character App Password in `SMTP_PASS`.
-4. Do not put the normal Google password in the environment file.
-5. Restart the API after changing environment values.
+1. Create a Resend API key.
+2. Put the key in `RESEND_API_KEY`.
+3. For testing, use `SMTP_FROM=onboarding@resend.dev`.
+4. For public usage, verify your domain in Resend and use an address like
+   `SMTP_FROM=noreply@yourdomain.com`.
+5. Restart or redeploy the API after changing environment values.
 
 `SMTP_FROM_NAME` is the sender name shown in the recipient's inbox.
 

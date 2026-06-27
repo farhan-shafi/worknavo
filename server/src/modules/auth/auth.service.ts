@@ -171,7 +171,7 @@ export async function requestPasswordReset(email: string) {
 
     throw new ApiError(
       502,
-      'The password reset email could not be delivered. Check your SMTP settings and try again.',
+      'The password reset email could not be delivered. Check your email settings and try again.',
     );
   }
 }

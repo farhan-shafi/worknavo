@@ -8,7 +8,7 @@ public portfolio deployment.
 - Frontend: Vercel or Netlify
 - API: Render or Railway
 - Database: MongoDB Atlas
-- Email: Gmail SMTP for testing, or Resend/Postmark SMTP for production
+- Email: Resend direct API for testing/production, or SMTP as a fallback
 
 ## Deploy the API
 
@@ -27,16 +27,19 @@ MONGO_URI=mongodb+srv://...
 JWT_ACCESS_SECRET=use-a-random-secret-at-least-32-characters-long
 JWT_REFRESH_SECRET=use-a-different-random-secret-at-least-32-characters
 CLIENT_URL=https://your-clientflow-frontend.example
+RESEND_API_KEY=re_...
 SMTP_HOST=
 SMTP_PORT=587
 SMTP_SECURE=false
 SMTP_USER=
 SMTP_PASS=
-SMTP_FROM=
+SMTP_FROM=noreply@your-verified-domain.example
 SMTP_FROM_NAME=ClientFlow
 ```
 
 The hosting provider normally supplies `PORT`; keep its provided value.
+When `RESEND_API_KEY` is set, ClientFlow sends email through the Resend API and
+does not need `SMTP_HOST`, `SMTP_USER`, or `SMTP_PASS`.
 
 ## Deploy the frontend
 
@@ -56,6 +59,7 @@ VITE_API_URL=https://your-clientflow-api.example/api
 - Allow the API host and your own IP in MongoDB Atlas Network Access.
 - Replace both JWT secrets with unrelated random values.
 - Set `CLIENT_URL` to the exact frontend origin, without a trailing slash.
-- Configure SMTP and send a test report to an address you control.
+- Configure Resend or SMTP and send a test report to an address you control.
 - Confirm register, login, PDF download, and logout on the deployed URL.
-- Never commit `.env` files, MongoDB credentials, or SMTP passwords.
+- Never commit `.env` files, MongoDB credentials, SMTP passwords, or Resend API
+  keys.

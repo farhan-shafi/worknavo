@@ -26,10 +26,42 @@ interface SendDocumentEmailInput {
   pdf: Buffer;
 }
 
-function smtpConfiguration() {
-  const fromAddress = env.SMTP_FROM ?? env.SMTP_USER;
+interface EmailAttachment {
+  content: Buffer;
+  contentType?: string;
+  filename: string;
+}
 
-  if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS || !fromAddress) {
+interface SendEmailInput {
+  attachments?: EmailAttachment[];
+  html: string;
+  replyTo?: string;
+  subject: string;
+  text: string;
+  to: string;
+}
+
+interface ResendEmailResponse {
+  id?: string;
+  message?: string;
+}
+
+function fromAddress() {
+  return env.SMTP_FROM ?? env.SMTP_USER;
+}
+
+function fromName() {
+  return env.SMTP_FROM_NAME || 'ClientFlow';
+}
+
+function formattedFromAddress(address: string) {
+  return `${fromName()} <${address}>`;
+}
+
+function smtpConfiguration() {
+  const senderAddress = fromAddress();
+
+  if (!env.SMTP_HOST || !env.SMTP_USER || !env.SMTP_PASS || !senderAddress) {
     throw new ApiError(
       503,
       'Email is not configured yet. Add SMTP_HOST, SMTP_USER, SMTP_PASS, and SMTP_FROM to server/.env.',
@@ -37,7 +69,7 @@ function smtpConfiguration() {
   }
 
   return {
-    fromAddress,
+    fromAddress: senderAddress,
     transporter: nodemailer.createTransport({
       host: env.SMTP_HOST,
       port: env.SMTP_PORT,
@@ -48,6 +80,81 @@ function smtpConfiguration() {
       },
     }),
   };
+}
+
+async function sendSmtpEmail(input: SendEmailInput) {
+  const { fromAddress: senderAddress, transporter } = smtpConfiguration();
+  const result = await transporter.sendMail({
+    attachments: input.attachments?.map((attachment) => ({
+      content: attachment.content,
+      contentType: attachment.contentType,
+      filename: attachment.filename,
+    })),
+    from: {
+      name: fromName(),
+      address: senderAddress,
+    },
+    html: input.html,
+    replyTo: input.replyTo,
+    subject: input.subject,
+    text: input.text,
+    to: input.to,
+  });
+
+  return result.messageId;
+}
+
+async function sendResendEmail(input: SendEmailInput) {
+  const senderAddress = fromAddress();
+
+  if (!env.RESEND_API_KEY || !senderAddress) {
+    throw new ApiError(
+      503,
+      'Email is not configured yet. Add RESEND_API_KEY and SMTP_FROM to server/.env.',
+    );
+  }
+
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      attachments: input.attachments?.map((attachment) => ({
+        content: attachment.content.toString('base64'),
+        filename: attachment.filename,
+      })),
+      from: formattedFromAddress(senderAddress),
+      html: input.html,
+      reply_to: input.replyTo,
+      subject: input.subject,
+      text: input.text,
+      to: [input.to],
+    }),
+  });
+
+  const body = (await response.json().catch(() => null)) as
+    | ResendEmailResponse
+    | null;
+
+  if (!response.ok) {
+    throw new ApiError(
+      502,
+      body?.message ??
+        `Resend could not deliver this email. Status ${response.status}.`,
+    );
+  }
+
+  return body?.id;
+}
+
+async function sendEmail(input: SendEmailInput) {
+  if (env.RESEND_API_KEY) {
+    return sendResendEmail(input);
+  }
+
+  return sendSmtpEmail(input);
 }
 
 function safeErrorMessage(error: unknown) {
@@ -72,29 +179,24 @@ export async function sendDocumentEmail(input: SendDocumentEmailInput) {
   });
 
   try {
-    const { fromAddress, transporter } = smtpConfiguration();
-    const result = await transporter.sendMail({
-      from: {
-        name: env.SMTP_FROM_NAME,
-        address: fromAddress,
-      },
+    const providerMessageId = await sendEmail({
+      attachments: [
+        {
+          content: input.pdf,
+          contentType: 'application/pdf',
+          filename: input.filename,
+        },
+      ],
+      html: input.html,
       to: input.client.email,
       replyTo: input.user.email,
       subject: input.subject,
       text: input.text,
-      html: input.html,
-      attachments: [
-        {
-          filename: input.filename,
-          content: input.pdf,
-          contentType: 'application/pdf',
-        },
-      ],
     });
 
     await EmailLogModel.findByIdAndUpdate(log._id, {
       $set: {
-        providerMessageId: result.messageId,
+        providerMessageId,
         sentAt: new Date(),
         status: 'sent',
       },
@@ -123,7 +225,7 @@ export async function sendDocumentEmail(input: SendDocumentEmailInput) {
 
     throw new ApiError(
       502,
-      'The email provider could not deliver this message. Check your SMTP settings and try again.',
+      'The email provider could not deliver this message. Check your email settings and try again.',
     );
   }
 }
@@ -134,12 +236,7 @@ export async function sendWorkspaceInvitationEmail(input: {
   organizationName: string;
   acceptUrl: string;
 }) {
-  const { fromAddress, transporter } = smtpConfiguration();
-  await transporter.sendMail({
-    from: {
-      name: env.SMTP_FROM_NAME,
-      address: fromAddress,
-    },
+  await sendEmail({
     to: input.recipient,
     subject: `Join ${input.organizationName}`,
     text: `${input.inviterName} invited you to join ${input.organizationName}. Accept the invitation: ${input.acceptUrl}`,
@@ -152,12 +249,7 @@ export async function sendPasswordResetEmail(input: {
   recipientName: string;
   resetUrl: string;
 }) {
-  const { fromAddress, transporter } = smtpConfiguration();
-  await transporter.sendMail({
-    from: {
-      name: env.SMTP_FROM_NAME,
-      address: fromAddress,
-    },
+  await sendEmail({
     to: input.recipient,
     subject: 'Reset your ClientFlow password',
     text: `Hi ${input.recipientName},\n\nUse this link to reset your ClientFlow password:\n${input.resetUrl}\n\nThis link expires in 1 hour. If you did not request it, you can ignore this email.`,

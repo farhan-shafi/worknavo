@@ -28,6 +28,7 @@ const environmentSchema = z.object({
     .enum(['development', 'test', 'production'])
     .default('development'),
   PORT: z.coerce.number().int().positive().default(5050),
+  RESEND_API_KEY: optionalEnvironmentString,
   SMTP_FROM: optionalEnvironmentString,
   SMTP_FROM_NAME: optionalEnvironmentString.default('ClientFlow'),
   SMTP_HOST: optionalEnvironmentString,
