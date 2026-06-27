@@ -75,6 +75,26 @@ function hashPasswordResetToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
+function safeEmailErrorDetails(error: unknown) {
+  if (!(error instanceof Error)) {
+    return { message: 'Unknown SMTP error.' };
+  }
+
+  const maybeSmtpError = error as Error & {
+    code?: unknown;
+    command?: unknown;
+    responseCode?: unknown;
+  };
+
+  return {
+    code: maybeSmtpError.code,
+    command: maybeSmtpError.command,
+    message: error.message.slice(0, 500),
+    name: error.name,
+    responseCode: maybeSmtpError.responseCode,
+  };
+}
+
 export async function registerUser(input: RegisterInput) {
   const existingUser = await UserModel.exists({ email: input.email });
 
@@ -139,6 +159,11 @@ export async function requestPasswordReset(email: string) {
     user.passwordResetTokenHash = undefined;
     user.passwordResetExpiresAt = undefined;
     await user.save();
+
+    console.error(
+      'Password reset email delivery failed.',
+      safeEmailErrorDetails(error),
+    );
 
     if (error instanceof ApiError) {
       throw error;
