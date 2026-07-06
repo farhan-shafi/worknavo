@@ -131,14 +131,14 @@ export function ClientFormDialog({
             >
               <Input
                 autoComplete="name"
-                placeholder="Jane Reeves"
+                placeholder="Alex Morgan"
                 {...form.register('name')}
               />
             </FormControl>
             <FormControl error={fieldError('companyName')} label="Company">
               <Input
                 autoComplete="organization"
-                placeholder="Reeves & Sons"
+                placeholder="Northstar Studio"
                 {...form.register('companyName')}
               />
             </FormControl>

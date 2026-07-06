@@ -103,7 +103,7 @@ export function RegisterPage() {
             autoComplete="name"
             error={form.formState.errors.name?.message}
             label="Your name"
-            placeholder="Farhan Shafi"
+            placeholder="Alex Morgan"
             registration={form.register('name')}
           />
           <FormField

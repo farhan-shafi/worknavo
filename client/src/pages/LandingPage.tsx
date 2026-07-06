@@ -80,7 +80,7 @@ const useCases = [
 const sampleActivity = [
   ['Project kickoff', 'BrightPixel Studio', '2.0h'],
   ['Landing page build', 'NovaTech AI', '3.75h'],
-  ['Invoice review', 'Reeves & Sons', '1.25h'],
+  ['Invoice review', 'Northstar Studio', '1.25h'],
 ];
 
 const dashboardStats: Array<{
