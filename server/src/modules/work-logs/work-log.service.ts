@@ -1,9 +1,12 @@
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+
 import type {
   WorkLogBillingFilter,
   WorkLogClient,
   WorkLogProject,
 } from '@clientflow/shared';
-import { isValidObjectId, type FilterQuery } from 'mongoose';
+import { isValidObjectId, Types, type FilterQuery } from 'mongoose';
 
 import { ClientModel, type ClientDocument } from '../../models/Client.model.js';
 import {
@@ -15,6 +18,10 @@ import { WorkCategoryModel } from '../../models/WorkCategory.model.js';
 import { WeeklyReportModel } from '../../models/WeeklyReport.model.js';
 import { AuditEventModel } from '../../models/AuditEvent.model.js';
 import { NotificationModel } from '../../models/Notification.model.js';
+import {
+  ScreenshotProofModel,
+  toScreenshotProofContract,
+} from '../../models/ScreenshotProof.model.js';
 import {
   WorkLogModel,
   toWorkLogContract,
@@ -33,12 +40,15 @@ import {
 } from '../../auth/workspace-context.js';
 import type {
   CreateWorkLogInput,
+  CreateScreenshotProofInput,
   RejectWorkLogApprovalInput,
   StartWorkLogTimerInput,
   StopWorkLogTimerInput,
   UpdateWorkLogInput,
 } from './work-log.validation.js';
 import { evaluateProjectBudgetAlerts } from '../projects/budget-alerts.service.js';
+
+const screenshotUploadDirectory = join(process.cwd(), 'uploads', 'screenshots');
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -47,6 +57,12 @@ function escapeRegex(value: string) {
 function requireValidWorkLogId(workLogId: string) {
   if (!isValidObjectId(workLogId)) {
     throw new ApiError(404, 'Work log not found.');
+  }
+}
+
+function requireValidScreenshotProofId(proofId: string) {
+  if (!isValidObjectId(proofId)) {
+    throw new ApiError(404, 'Screenshot proof not found.');
   }
 }
 
@@ -451,6 +467,28 @@ function assertApprovalManager(actor: WorkspaceActor) {
   if (!canManageWorkLog(actor)) {
     throw new ApiError(403, 'You cannot approve or reject work logs.');
   }
+}
+
+function parseScreenshotDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:(image\/(?:jpeg|png));base64,(.+)$/);
+
+  if (!match?.[1] || !match[2]) {
+    throw new ApiError(422, 'Upload a PNG or JPEG screenshot proof.');
+  }
+
+  const buffer = Buffer.from(match[2], 'base64');
+  if (buffer.length > 850_000) {
+    throw new ApiError(
+      413,
+      'Screenshot proof is too large. Capture a smaller proof image.',
+    );
+  }
+
+  return {
+    buffer,
+    extension: match[1] === 'image/png' ? 'png' : 'jpg',
+    mimeType: match[1] as 'image/jpeg' | 'image/png',
+  };
 }
 
 export async function listWorkLogs(
@@ -981,4 +1019,139 @@ export async function rejectWorkLog(
     clientContract(client),
     projectContract(project),
   );
+}
+
+async function visibleWorkLogForProof(
+  actor: WorkspaceActor,
+  workLogId: string,
+) {
+  requireValidWorkLogId(workLogId);
+  const workLog = await WorkLogModel.findOne({
+    _id: workLogId,
+    ...(await workLogVisibilityQuery(actor)),
+  });
+
+  if (!workLog) {
+    throw new ApiError(404, 'Work log not found.');
+  }
+
+  return workLog;
+}
+
+export async function listScreenshotProofs(
+  actor: WorkspaceActor,
+  workLogId: string,
+) {
+  const workLog = await visibleWorkLogForProof(actor, workLogId);
+  const proofs = await ScreenshotProofModel.find({
+    organizationId: actor.organization._id,
+    workLogId: workLog._id,
+  }).sort({ capturedAt: -1 });
+
+  return {
+    screenshotProofs: proofs.map(toScreenshotProofContract),
+    total: proofs.length,
+  };
+}
+
+export async function createScreenshotProof(
+  actor: WorkspaceActor,
+  workLogId: string,
+  input: CreateScreenshotProofInput,
+) {
+  const workLog = await visibleWorkLogForProof(actor, workLogId);
+
+  if (!sameObjectId(workLog.membershipId, actor.membership._id)) {
+    throw new ApiError(
+      403,
+      'Only the timer owner can capture screenshot proof.',
+    );
+  }
+
+  if (workLog.status !== 'running') {
+    throw new ApiError(
+      409,
+      'Screenshot proof can only be captured while the timer is running.',
+    );
+  }
+
+  const parsed = parseScreenshotDataUrl(input.imageDataUrl);
+  const proofId = new Types.ObjectId();
+  const storagePath = join(
+    'uploads',
+    'screenshots',
+    `${proofId.toString()}.${parsed.extension}`,
+  );
+  const absolutePath = join(process.cwd(), storagePath);
+
+  await mkdir(screenshotUploadDirectory, { recursive: true });
+  await writeFile(absolutePath, parsed.buffer);
+
+  const proof = await ScreenshotProofModel.create({
+    _id: proofId,
+    organizationId: actor.organization._id,
+    workLogId: workLog._id,
+    membershipId: actor.membership._id,
+    createdByUserId: actor.user._id,
+    capturedAt: input.capturedAt,
+    mimeType: parsed.mimeType,
+    fileSize: parsed.buffer.length,
+    storagePath,
+  });
+
+  await AuditEventModel.create({
+    organizationId: actor.organization._id,
+    actorMembershipId: actor.membership._id,
+    entityType: 'screenshot_proof',
+    entityId: proof._id,
+    action: 'screenshot_proof.created',
+    summary: { workLogId: workLog._id.toString(), fileSize: proof.fileSize },
+  });
+
+  return toScreenshotProofContract(proof);
+}
+
+export async function getScreenshotProofFile(
+  actor: WorkspaceActor,
+  workLogId: string,
+  proofId: string,
+) {
+  const workLog = await visibleWorkLogForProof(actor, workLogId);
+  requireValidScreenshotProofId(proofId);
+  const proof = await ScreenshotProofModel.findOne({
+    _id: proofId,
+    organizationId: actor.organization._id,
+    workLogId: workLog._id,
+  });
+
+  if (!proof) {
+    throw new ApiError(404, 'Screenshot proof not found.');
+  }
+
+  return {
+    absolutePath: join(process.cwd(), proof.storagePath),
+    proof,
+  };
+}
+
+export async function deleteScreenshotProof(
+  actor: WorkspaceActor,
+  workLogId: string,
+  proofId: string,
+) {
+  const { absolutePath, proof } = await getScreenshotProofFile(
+    actor,
+    workLogId,
+    proofId,
+  );
+
+  if (
+    !sameObjectId(proof.membershipId, actor.membership._id) &&
+    !canManageWorkLog(actor)
+  ) {
+    throw new ApiError(403, 'You cannot delete this screenshot proof.');
+  }
+
+  await proof.deleteOne();
+  await unlink(absolutePath).catch(() => undefined);
 }

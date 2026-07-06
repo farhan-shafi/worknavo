@@ -1,8 +1,20 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { WorkLog, WorkLogLocationProof } from '@clientflow/shared';
+import type {
+  ScreenshotProof,
+  WorkLog,
+  WorkLogLocationProof,
+} from '@clientflow/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { LoaderCircle, MapPin, PauseCircle, PlayCircle } from 'lucide-react';
+import {
+  Camera,
+  Download,
+  LoaderCircle,
+  MapPin,
+  PauseCircle,
+  PlayCircle,
+  Trash2,
+} from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -75,6 +87,54 @@ async function captureLocationProof(): Promise<
       },
     );
   });
+}
+
+async function captureScreenshotProof() {
+  if (!navigator.mediaDevices?.getDisplayMedia) {
+    throw new Error('Screen capture is not available in this browser.');
+  }
+
+  const stream = await navigator.mediaDevices.getDisplayMedia({
+    audio: false,
+    video: true,
+  });
+
+  try {
+    const video = document.createElement('video');
+    video.muted = true;
+    video.srcObject = stream;
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error('Screenshot preview failed.'));
+    });
+    await video.play();
+
+    if (!video.videoWidth || !video.videoHeight) {
+      throw new Error('Screenshot capture failed.');
+    }
+
+    const maxWidth = 1280;
+    const scale = Math.min(1, maxWidth / video.videoWidth);
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(video.videoWidth * scale);
+    canvas.height = Math.round(video.videoHeight * scale);
+    const context = canvas.getContext('2d');
+
+    if (!context) {
+      throw new Error('Screenshot capture failed.');
+    }
+
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    return {
+      capturedAt: new Date().toISOString(),
+      imageDataUrl: canvas.toDataURL('image/jpeg', 0.55),
+    };
+  } finally {
+    for (const track of stream.getTracks()) {
+      track.stop();
+    }
+  }
 }
 
 export function WorkLogTimerPanel({
@@ -162,6 +222,51 @@ export function WorkLogTimerPanel({
       );
     },
   });
+  const screenshotProofs = useQuery({
+    queryKey: ['screenshot-proofs', activeTimer?.id],
+    queryFn: () => workLogApi.listScreenshotProofs(activeTimer?.id ?? ''),
+    enabled: Boolean(activeTimer),
+  });
+  const captureScreenshot = useMutation({
+    mutationFn: async () => {
+      if (!activeTimer) throw new Error('No active timer.');
+      return workLogApi.createScreenshotProof(
+        activeTimer.id,
+        await captureScreenshotProof(),
+      );
+    },
+    onSuccess: ({ message }) => {
+      void queryClient.invalidateQueries({ queryKey: ['screenshot-proofs'] });
+      toast.success(message ?? 'Screenshot proof captured.');
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : 'Unable to capture screenshot proof.',
+      );
+    },
+  });
+  const deleteScreenshot = useMutation({
+    mutationFn: ({
+      proofId,
+      workLogId,
+    }: {
+      proofId: string;
+      workLogId: string;
+    }) => workLogApi.deleteScreenshotProof(workLogId, proofId),
+    onSuccess: ({ message }) => {
+      void queryClient.invalidateQueries({ queryKey: ['screenshot-proofs'] });
+      toast.success(message);
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : 'Unable to delete screenshot proof.',
+      );
+    },
+  });
 
   useEffect(() => {
     form.reset(defaultValues(defaultClientId));
@@ -192,8 +297,22 @@ export function WorkLogTimerPanel({
     return (
       <RunningTimerCard
         activeTimer={activeTimer}
+        captureScreenshotPending={captureScreenshot.isPending}
+        deleteScreenshotPending={deleteScreenshot.isPending}
         onStop={() => stopTimer.mutate()}
+        onCaptureScreenshot={() => captureScreenshot.mutate()}
+        onDeleteScreenshot={(proof) =>
+          deleteScreenshot.mutate({
+            proofId: proof.id,
+            workLogId: activeTimer.id,
+          })
+        }
+        onDownloadScreenshot={(proof) =>
+          void workLogApi.downloadScreenshotProof(activeTimer.id, proof.id)
+        }
         pending={stopTimer.isPending}
+        screenshotProofs={screenshotProofs.data?.screenshotProofs ?? []}
+        screenshotProofsLoading={screenshotProofs.isLoading}
       />
     );
   }
@@ -333,12 +452,26 @@ export function WorkLogTimerPanel({
 
 function RunningTimerCard({
   activeTimer,
+  captureScreenshotPending,
+  deleteScreenshotPending,
+  onCaptureScreenshot,
+  onDeleteScreenshot,
+  onDownloadScreenshot,
   onStop,
   pending,
+  screenshotProofs,
+  screenshotProofsLoading,
 }: {
   activeTimer: WorkLog;
+  captureScreenshotPending: boolean;
+  deleteScreenshotPending: boolean;
+  onCaptureScreenshot: () => void;
+  onDeleteScreenshot: (proof: ScreenshotProof) => void;
+  onDownloadScreenshot: (proof: ScreenshotProof) => void;
   onStop: () => void;
   pending: boolean;
+  screenshotProofs: ScreenshotProof[];
+  screenshotProofsLoading: boolean;
 }) {
   const [now, setNow] = useState(() => Date.now());
 
@@ -395,6 +528,20 @@ function RunningTimerCard({
 
         <div className="flex gap-2">
           <Button
+            className="min-w-44"
+            disabled={captureScreenshotPending}
+            onClick={onCaptureScreenshot}
+            type="button"
+            variant="outline"
+          >
+            {captureScreenshotPending ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <Camera className="size-4" />
+            )}
+            {captureScreenshotPending ? 'Capturing…' : 'Screenshot proof'}
+          </Button>
+          <Button
             className="min-w-36"
             disabled={pending}
             onClick={onStop}
@@ -409,6 +556,66 @@ function RunningTimerCard({
             {pending ? 'Stopping…' : 'Stop timer'}
           </Button>
         </div>
+      </div>
+      <div className="border-t border-white/10 px-6 py-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-extrabold">Screenshot proofs</p>
+            <p className="mt-1 text-xs text-white/55">
+              Manual capture only. The browser picker appears every time; no
+              silent screenshots.
+            </p>
+          </div>
+          <Badge variant="dark">
+            {screenshotProofs.length} proof
+            {screenshotProofs.length === 1 ? '' : 's'}
+          </Badge>
+        </div>
+        {screenshotProofsLoading ? (
+          <p className="mt-3 text-xs text-white/55">Loading proofs…</p>
+        ) : screenshotProofs.length ? (
+          <div className="mt-3 grid gap-2 md:grid-cols-2">
+            {screenshotProofs.map((proof) => (
+              <div
+                className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                key={proof.id}
+              >
+                <div>
+                  <p className="text-xs font-bold">
+                    {new Date(proof.capturedAt).toLocaleString()}
+                  </p>
+                  <p className="text-[11px] text-white/50">
+                    {(proof.fileSize / 1024).toFixed(0)} KB
+                  </p>
+                </div>
+                <div className="flex gap-1">
+                  <Button
+                    onClick={() => onDownloadScreenshot(proof)}
+                    size="icon"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Download className="size-4" />
+                  </Button>
+                  <Button
+                    className="text-danger hover:bg-danger/10"
+                    disabled={deleteScreenshotPending}
+                    onClick={() => onDeleteScreenshot(proof)}
+                    size="icon"
+                    type="button"
+                    variant="ghost"
+                  >
+                    <Trash2 className="size-4" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-white/55">
+            No screenshot proof captured for this timer yet.
+          </p>
+        )}
       </div>
     </Card>
   );

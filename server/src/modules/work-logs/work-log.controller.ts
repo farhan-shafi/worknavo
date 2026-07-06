@@ -1,5 +1,7 @@
 import type {
   MessageResponse,
+  ScreenshotProofListResponse,
+  ScreenshotProofResponse,
   WorkLogListResponse,
   WorkLogResponse,
 } from '@clientflow/shared';
@@ -9,9 +11,13 @@ import { ApiError } from '../../utils/api-error.js';
 import { workspaceActor } from '../../auth/workspace-context.js';
 import {
   approveWorkLog as approveWorkLogService,
+  createScreenshotProof as createScreenshotProofService,
   createWorkLog as createWorkLogService,
+  deleteScreenshotProof as deleteScreenshotProofService,
   deleteWorkLog as deleteWorkLogService,
+  getScreenshotProofFile,
   getWorkLog,
+  listScreenshotProofs as listScreenshotProofsService,
   listWorkLogs as listWorkLogsService,
   rejectWorkLog as rejectWorkLogService,
   startWorkLogTimer as startWorkLogTimerService,
@@ -20,6 +26,7 @@ import {
   updateWorkLog as updateWorkLogService,
 } from './work-log.service.js';
 import {
+  createScreenshotProofSchema,
   createWorkLogSchema,
   listWorkLogsQuerySchema,
   rejectWorkLogApprovalSchema,
@@ -215,6 +222,79 @@ export async function rejectWorkLog(request: Request, response: Response) {
   const body: WorkLogResponse = {
     message: 'Work log rejected.',
     workLog,
+  };
+  response.status(200).json(body);
+}
+
+function proofId(request: Request) {
+  const id = request.params.proofId;
+
+  if (typeof id !== 'string') {
+    throw new ApiError(404, 'Screenshot proof not found.');
+  }
+
+  return id;
+}
+
+export async function listScreenshotProofs(
+  request: Request,
+  response: Response,
+) {
+  const body: ScreenshotProofListResponse = await listScreenshotProofsService(
+    workspaceActor(request),
+    workLogId(request),
+  );
+  response.status(200).json(body);
+}
+
+export async function createScreenshotProof(
+  request: Request,
+  response: Response,
+) {
+  const input = createScreenshotProofSchema.parse(request.body);
+  const screenshotProof = await createScreenshotProofService(
+    workspaceActor(request),
+    workLogId(request),
+    input,
+  );
+  const body: ScreenshotProofResponse = {
+    message: 'Screenshot proof captured.',
+    screenshotProof,
+  };
+  response.status(201).json(body);
+}
+
+export async function downloadScreenshotProof(
+  request: Request,
+  response: Response,
+) {
+  const { absolutePath, proof } = await getScreenshotProofFile(
+    workspaceActor(request),
+    workLogId(request),
+    proofId(request),
+  );
+
+  response
+    .status(200)
+    .type(proof.mimeType)
+    .set({
+      'Cache-Control': 'private, no-store',
+      'Content-Disposition': `attachment; filename="screenshot-proof-${proof._id.toString()}.${proof.mimeType === 'image/png' ? 'png' : 'jpg'}"`,
+    })
+    .sendFile(absolutePath);
+}
+
+export async function deleteScreenshotProof(
+  request: Request,
+  response: Response,
+) {
+  await deleteScreenshotProofService(
+    workspaceActor(request),
+    workLogId(request),
+    proofId(request),
+  );
+  const body: MessageResponse = {
+    message: 'Screenshot proof deleted.',
   };
   response.status(200).json(body);
 }

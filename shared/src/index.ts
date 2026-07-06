@@ -288,6 +288,26 @@ export interface WorkLogResponse {
   message?: string;
 }
 
+export interface ScreenshotProof {
+  id: string;
+  workLogId: string;
+  capturedAt: string;
+  mimeType: 'image/jpeg' | 'image/png';
+  fileSize: number;
+  fileUrl: string;
+  createdAt: string;
+}
+
+export interface ScreenshotProofListResponse {
+  screenshotProofs: ScreenshotProof[];
+  total: number;
+}
+
+export interface ScreenshotProofResponse {
+  screenshotProof: ScreenshotProof;
+  message?: string;
+}
+
 export type ExpenseBillableFilter = 'all' | 'billable' | 'non-billable';
 export type ExpenseInvoiceFilter = 'all' | 'uninvoiced' | 'invoiced';
 

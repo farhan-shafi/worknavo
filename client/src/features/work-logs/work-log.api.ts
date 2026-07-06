@@ -1,11 +1,13 @@
 import type {
   MessageResponse,
+  ScreenshotProofListResponse,
+  ScreenshotProofResponse,
   WorkLogLocationProof,
   WorkLogListResponse,
   WorkLogResponse,
 } from '@clientflow/shared';
 
-import { request } from '../../lib/api-client';
+import { downloadFile, request } from '../../lib/api-client';
 import type {
   WorkLogFilters,
   WorkLogFormValues,
@@ -106,6 +108,31 @@ export const workLogApi = {
       method: 'POST',
       body: JSON.stringify({ reason: reason?.trim() || undefined }),
     }),
+  listScreenshotProofs: (workLogId: string) =>
+    request<ScreenshotProofListResponse>(
+      `/work-logs/${workLogId}/screenshot-proofs`,
+    ),
+  createScreenshotProof: (
+    workLogId: string,
+    values: { imageDataUrl: string; capturedAt: string },
+  ) =>
+    request<ScreenshotProofResponse>(
+      `/work-logs/${workLogId}/screenshot-proofs`,
+      {
+        method: 'POST',
+        body: JSON.stringify(values),
+      },
+    ),
+  downloadScreenshotProof: (workLogId: string, proofId: string) =>
+    downloadFile(
+      `/work-logs/${workLogId}/screenshot-proofs/${proofId}/file`,
+      `screenshot-proof-${proofId}.jpg`,
+    ),
+  deleteScreenshotProof: (workLogId: string, proofId: string) =>
+    request<MessageResponse>(
+      `/work-logs/${workLogId}/screenshot-proofs/${proofId}`,
+      { method: 'DELETE' },
+    ),
   delete: (workLogId: string) =>
     request<MessageResponse>(`/work-logs/${workLogId}`, {
       method: 'DELETE',
