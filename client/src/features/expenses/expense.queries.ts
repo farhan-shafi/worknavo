@@ -9,9 +9,10 @@ export const expenseQueryKeys = {
     [...expenseQueryKeys.all, 'list', filters] as const,
 };
 
-export function useExpenses(filters: ExpenseFilters) {
+export function useExpenses(filters: ExpenseFilters, enabled = true) {
   return useQuery({
     queryKey: expenseQueryKeys.list(filters),
     queryFn: () => expenseApi.list(filters),
+    enabled,
   });
 }

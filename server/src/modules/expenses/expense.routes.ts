@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { workspaceActor } from '../../auth/workspace-context.js';
 import { requireAuth } from '../../middleware/auth.middleware.js';
+import { requirePlanFeature } from '../../middleware/plan.middleware.js';
 import { ApiError } from '../../utils/api-error.js';
 import {
   createExpense,
@@ -18,7 +19,7 @@ import {
 
 export const expenseRouter = Router();
 
-expenseRouter.use(requireAuth);
+expenseRouter.use(requireAuth, requirePlanFeature('expenses'));
 expenseRouter
   .route('/')
   .get(async (request, response) => {

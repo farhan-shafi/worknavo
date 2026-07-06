@@ -1,4 +1,8 @@
-import type { Permission } from '@clientflow/shared';
+import {
+  planIncludes,
+  type Permission,
+  type PlanFeature,
+} from '@clientflow/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   BriefcaseBusiness,
@@ -51,6 +55,7 @@ const navigation: Array<{
   live: boolean;
   permission?: Permission;
   hideWhenPermission?: Permission;
+  planFeature?: PlanFeature;
 }> = [
   {
     label: 'Overview',
@@ -115,6 +120,7 @@ const navigation: Array<{
     href: '/app/expenses',
     live: true,
     permission: 'financials.view',
+    planFeature: 'expenses',
   },
   {
     label: 'Analytics',
@@ -122,6 +128,7 @@ const navigation: Array<{
     href: '/app/analytics',
     live: true,
     permission: 'analytics.viewTeam',
+    planFeature: 'teamAnalytics',
   },
   {
     label: 'Audit log',
@@ -235,10 +242,12 @@ export function AppLayout() {
       <nav className="mt-2 space-y-1">
         {navigation
           .filter(
-            ({ hideWhenPermission, permission }) =>
+            ({ hideWhenPermission, permission, planFeature }) =>
               (!permission || auth.permissions.includes(permission)) &&
               (!hideWhenPermission ||
-                !auth.permissions.includes(hideWhenPermission)),
+                !auth.permissions.includes(hideWhenPermission)) &&
+              (!planFeature ||
+                planIncludes(auth.organization?.subscriptionPlan, planFeature)),
           )
           .map(({ href, icon: Icon, label, live }) =>
             live ? (

@@ -8,6 +8,7 @@ import { Router } from 'express';
 import { workspaceActor } from '../../auth/workspace-context.js';
 import { env } from '../../config/env.js';
 import { requireAuth } from '../../middleware/auth.middleware.js';
+import { requirePlanFeature } from '../../middleware/plan.middleware.js';
 import { ApiError } from '../../utils/api-error.js';
 import {
   createScheduledReport,
@@ -47,7 +48,7 @@ scheduledReportRouter.post('/run', async (request, response) => {
   response.status(200).json(result);
 });
 
-scheduledReportRouter.use(requireAuth);
+scheduledReportRouter.use(requireAuth, requirePlanFeature('scheduledReports'));
 
 scheduledReportRouter
   .route('/')

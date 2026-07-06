@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { planIncludes } from '@clientflow/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { addDays, format } from 'date-fns';
 import { FileText, LoaderCircle } from 'lucide-react';
@@ -24,6 +25,7 @@ import { ApiError } from '../../lib/api-client';
 import { clientQueryKeys, useClients } from '../clients/client.queries';
 import { expenseQueryKeys, useExpenses } from '../expenses/expense.queries';
 import { formatMoney } from '../projects/project.utils';
+import { useAuth } from '../auth/use-auth';
 import { useWorkLogs, workLogQueryKeys } from '../work-logs/work-log.queries';
 import { formatHours, formatWorkLogDate } from '../work-logs/work-log.utils';
 import { invoiceApi } from './invoice.api';
@@ -60,6 +62,11 @@ export function GenerateInvoiceDialog({
   onOpenChange,
   open,
 }: GenerateInvoiceDialogProps) {
+  const { organization } = useAuth();
+  const expensesEnabled = planIncludes(
+    organization?.subscriptionPlan,
+    'expenses',
+  );
   const queryClient = useQueryClient();
   const clientsQuery = useClients({ search: '', status: 'all' });
   const form = useForm<GenerateInvoiceValues>({
@@ -77,14 +84,17 @@ export function GenerateInvoiceDialog({
     startDate: '',
     endDate: '',
   });
-  const expensesQuery = useExpenses({
-    clientId,
-    projectId: '',
-    billable: 'billable',
-    invoice: 'uninvoiced',
-    startDate: '',
-    endDate: '',
-  });
+  const expensesQuery = useExpenses(
+    {
+      clientId,
+      projectId: '',
+      billable: 'billable',
+      invoice: 'uninvoiced',
+      startDate: '',
+      endDate: '',
+    },
+    expensesEnabled,
+  );
   const generateInvoice = useMutation({
     mutationFn: (values: GenerateInvoiceValues) =>
       invoiceApi.generateFromWorkLogs(values),
@@ -295,60 +305,66 @@ export function GenerateInvoiceDialog({
                 </div>
               )}
 
-              <div className="flex items-center justify-between gap-3 pt-3">
-                <h3 className="font-extrabold">Eligible expenses</h3>
-                <Badge variant="neutral">
-                  {selectedExpenses.length} selected
-                </Badge>
-              </div>
+              {expensesEnabled ? (
+                <>
+                  <div className="flex items-center justify-between gap-3 pt-3">
+                    <h3 className="font-extrabold">Eligible expenses</h3>
+                    <Badge variant="neutral">
+                      {selectedExpenses.length} selected
+                    </Badge>
+                  </div>
 
-              {!clientId ? null : expensesQuery.isLoading ? (
-                <div className="rounded-2xl border p-6 text-sm text-slate-500">
-                  Loading expenses…
-                </div>
-              ) : eligibleExpenses.length === 0 ? (
-                <div className="rounded-2xl border p-6">
-                  <EmptyState
-                    compact
-                    description="No billable uninvoiced expenses were found for this client."
-                    icon={FileText}
-                    title="No expenses ready"
-                  />
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {eligibleExpenses.map((expense) => (
-                    <label
-                      className="hover:border-primary/25 flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition"
-                      key={expense.id}
-                    >
-                      <input
-                        checked={selectedExpenseIds.includes(expense.id)}
-                        className="mt-1"
-                        onChange={() => toggleExpense(expense.id)}
-                        type="checkbox"
+                  {!clientId ? null : expensesQuery.isLoading ? (
+                    <div className="rounded-2xl border p-6 text-sm text-slate-500">
+                      Loading expenses…
+                    </div>
+                  ) : eligibleExpenses.length === 0 ? (
+                    <div className="rounded-2xl border p-6">
+                      <EmptyState
+                        compact
+                        description="No billable uninvoiced expenses were found for this client."
+                        icon={FileText}
+                        title="No expenses ready"
                       />
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <p className="font-bold">{expense.description}</p>
-                          <p className="text-sm font-extrabold">
-                            {formatMoney(expense.amount, expense.currency)}
-                          </p>
-                        </div>
-                        <p className="text-muted mt-1 text-sm">
-                          {expense.project?.name ?? 'No project'} ·{' '}
-                          {new Date(expense.expenseDate).toLocaleDateString()}
-                        </p>
-                        {expense.category ? (
-                          <Badge className="mt-3" variant="neutral">
-                            {expense.category}
-                          </Badge>
-                        ) : null}
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {eligibleExpenses.map((expense) => (
+                        <label
+                          className="hover:border-primary/25 flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition"
+                          key={expense.id}
+                        >
+                          <input
+                            checked={selectedExpenseIds.includes(expense.id)}
+                            className="mt-1"
+                            onChange={() => toggleExpense(expense.id)}
+                            type="checkbox"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <p className="font-bold">{expense.description}</p>
+                              <p className="text-sm font-extrabold">
+                                {formatMoney(expense.amount, expense.currency)}
+                              </p>
+                            </div>
+                            <p className="text-muted mt-1 text-sm">
+                              {expense.project?.name ?? 'No project'} ·{' '}
+                              {new Date(
+                                expense.expenseDate,
+                              ).toLocaleDateString()}
+                            </p>
+                            {expense.category ? (
+                              <Badge className="mt-3" variant="neutral">
+                                {expense.category}
+                              </Badge>
+                            ) : null}
+                          </div>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : null}
             </div>
 
             <div className="space-y-4 rounded-2xl border p-5">

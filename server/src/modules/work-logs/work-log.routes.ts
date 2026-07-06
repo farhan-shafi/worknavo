@@ -1,6 +1,7 @@
 import { Router } from 'express';
 
 import { requireAuth } from '../../middleware/auth.middleware.js';
+import { requirePlanFeature } from '../../middleware/plan.middleware.js';
 import {
   createScreenshotProof,
   createWorkLog,
@@ -23,13 +24,18 @@ workLogRouter.post('/timer/stop', stopWorkLogTimer);
 workLogRouter.route('/').get(listWorkLogs).post(createWorkLog);
 workLogRouter
   .route('/:id/screenshot-proofs')
-  .get(listScreenshotProofs)
-  .post(createScreenshotProof);
+  .get(requirePlanFeature('proofTracking'), listScreenshotProofs)
+  .post(requirePlanFeature('proofTracking'), createScreenshotProof);
 workLogRouter.get(
   '/:id/screenshot-proofs/:proofId/file',
+  requirePlanFeature('proofTracking'),
   downloadScreenshotProof,
 );
-workLogRouter.delete('/:id/screenshot-proofs/:proofId', deleteScreenshotProof);
+workLogRouter.delete(
+  '/:id/screenshot-proofs/:proofId',
+  requirePlanFeature('proofTracking'),
+  deleteScreenshotProof,
+);
 workLogRouter
   .route('/:id')
   .get(showWorkLog)

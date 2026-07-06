@@ -1,10 +1,11 @@
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import type {
-  WorkLogBillingFilter,
-  WorkLogClient,
-  WorkLogProject,
+import {
+  planIncludes,
+  type WorkLogBillingFilter,
+  type WorkLogClient,
+  type WorkLogProject,
 } from '@clientflow/shared';
 import { isValidObjectId, Types, type FilterQuery } from 'mongoose';
 
@@ -587,6 +588,14 @@ export async function startWorkLogTimer(
 ) {
   assertActorPermission(actor, 'worklogs.createOwn');
   const { locationProof, ...workLogInput } = input;
+
+  if (
+    locationProof &&
+    !planIncludes(actor.organization.subscriptionPlan, 'proofTracking')
+  ) {
+    throw new ApiError(402, 'Pro plan is required for GPS proof.');
+  }
+
   const existingTimer = await WorkLogModel.findOne(runningTimerQuery(actor));
 
   if (existingTimer) {
@@ -652,6 +661,9 @@ export async function stopWorkLogTimer(
   workLog.status = 'completed';
   workLog.workDate = workLog.timerStartedAt;
   if (input.locationProof) {
+    if (!planIncludes(actor.organization.subscriptionPlan, 'proofTracking')) {
+      throw new ApiError(402, 'Pro plan is required for GPS proof.');
+    }
     workLog.timerStopLocation = input.locationProof;
   }
   await workLog.save();

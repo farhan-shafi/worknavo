@@ -1,4 +1,8 @@
-import type { WorkLog, WorkLogLocationProof } from '@clientflow/shared';
+import {
+  planIncludes,
+  type WorkLog,
+  type WorkLogLocationProof,
+} from '@clientflow/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Download, ExternalLink, MapPin, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,6 +19,7 @@ import {
 } from '../../components/ui/dialog';
 import { ApiError, apiAssetUrl } from '../../lib/api-client';
 import { formatMoney } from '../projects/project.utils';
+import { useAuth } from '../auth/use-auth';
 import { workLogApi } from './work-log.api';
 import { formatHours, formatWorkLogDate } from './work-log.utils';
 
@@ -37,11 +42,16 @@ export function WorkLogDetailDialog({
   open,
   workLog,
 }: WorkLogDetailDialogProps) {
+  const { organization } = useAuth();
   const queryClient = useQueryClient();
+  const proofTrackingEnabled = planIncludes(
+    organization?.subscriptionPlan,
+    'proofTracking',
+  );
   const screenshotProofs = useQuery({
     queryKey: ['screenshot-proofs', workLog?.id],
     queryFn: () => workLogApi.listScreenshotProofs(workLog?.id ?? ''),
-    enabled: open && Boolean(workLog),
+    enabled: open && Boolean(workLog) && proofTrackingEnabled,
   });
   const deleteProof = useMutation({
     mutationFn: (proofId: string) =>
@@ -159,12 +169,17 @@ export function WorkLogDetailDialog({
               </p>
             </div>
             <Badge variant="neutral">
-              {screenshotProofs.data?.total ?? 0} proof
-              {(screenshotProofs.data?.total ?? 0) === 1 ? '' : 's'}
+              {proofTrackingEnabled
+                ? `${screenshotProofs.data?.total ?? 0} proof${(screenshotProofs.data?.total ?? 0) === 1 ? '' : 's'}`
+                : 'Pro'}
             </Badge>
           </div>
 
-          {screenshotProofs.isLoading ? (
+          {!proofTrackingEnabled ? (
+            <p className="text-muted mt-4 text-sm">
+              Screenshot proof viewing is available on the Pro plan.
+            </p>
+          ) : screenshotProofs.isLoading ? (
             <p className="text-muted mt-4 text-sm">Loading proofs…</p>
           ) : screenshotProofs.data?.screenshotProofs.length ? (
             <div className="mt-4 grid gap-4 md:grid-cols-2">

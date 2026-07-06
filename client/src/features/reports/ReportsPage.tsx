@@ -1,4 +1,8 @@
-import type { WeeklyReport, WeeklyReportStatus } from '@clientflow/shared';
+import {
+  planIncludes,
+  type WeeklyReport,
+  type WeeklyReportStatus,
+} from '@clientflow/shared';
 import {
   CalendarDays,
   CheckCircle2,
@@ -26,7 +30,11 @@ import { useAuth } from '../auth/use-auth';
 import { ScheduledReportsPanel } from './ScheduledReportsPanel';
 
 export function ReportsPage() {
-  const { permissions } = useAuth();
+  const { organization, permissions } = useAuth();
+  const scheduledReportsEnabled = planIncludes(
+    organization?.subscriptionPlan,
+    'scheduledReports',
+  );
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
   const [status, setStatus] = useState<WeeklyReportStatus | 'all'>('all');
@@ -122,7 +130,7 @@ export function ReportsPage() {
         />
       </div>
 
-      {permissions.includes('reports.manage') ? (
+      {permissions.includes('reports.manage') && scheduledReportsEnabled ? (
         <ScheduledReportsPanel />
       ) : null}
 

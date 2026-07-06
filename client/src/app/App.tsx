@@ -3,6 +3,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { DashboardLoadingSkeleton } from '../components/shared/LoadingSkeleton';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
+import { PlanGate } from '../features/billing/PlanGate';
 
 const AppLayout = lazy(() =>
   import('../components/layout/AppLayout').then((module) => ({
@@ -138,11 +139,25 @@ export function App() {
             <Route element={<ProjectsPage />} path="projects" />
             <Route element={<ProjectTeamsPage />} path="project-teams" />
             <Route element={<InvoicesPage />} path="invoices" />
-            <Route element={<ExpensesPage />} path="expenses" />
+            <Route
+              element={
+                <PlanGate feature="expenses">
+                  <ExpensesPage />
+                </PlanGate>
+              }
+              path="expenses"
+            />
             <Route element={<ReportsPage />} path="reports" />
             <Route element={<WorkLogsPage />} path="work-logs" />
             <Route element={<TeamPage />} path="team" />
-            <Route element={<AnalyticsPage />} path="analytics" />
+            <Route
+              element={
+                <PlanGate feature="teamAnalytics">
+                  <AnalyticsPage />
+                </PlanGate>
+              }
+              path="analytics"
+            />
             <Route element={<AuditPage />} path="audit" />
             <Route element={<CategoriesPage />} path="categories" />
             <Route element={<SettingsPage />} path="settings" />

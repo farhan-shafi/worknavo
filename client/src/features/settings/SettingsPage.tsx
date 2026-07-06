@@ -4,6 +4,7 @@ import {
   Building2,
   Camera,
   CircleDollarSign,
+  CreditCard,
   FileText,
   ListChecks,
   LoaderCircle,
@@ -12,10 +13,12 @@ import {
 } from 'lucide-react';
 import { type ChangeEvent, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
+import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { PageHeader } from '../../components/shared/PageHeader';
 import { Avatar } from '../../components/ui/avatar';
+import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -28,7 +31,10 @@ import { settingsSchema, type SettingsFormValues } from './settings.schemas';
 
 export function SettingsPage() {
   const { organization, permissions, user } = useAuth();
+  const [searchParams] = useSearchParams();
   const queryClient = useQueryClient();
+  const upgradeFeature = searchParams.get('upgrade');
+  const currentPlan = organization?.subscriptionPlan ?? 'free';
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
     values: {
@@ -208,6 +214,36 @@ export function SettingsPage() {
         eyebrow="Workspace"
         title="Settings"
       />
+
+      <SettingsCard
+        description="Your current plan controls which advanced modules are available inside this workspace."
+        icon={<CreditCard className="size-5" />}
+        title="Plan"
+      >
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <Badge variant={currentPlan === 'free' ? 'neutral' : 'primary'}>
+              {currentPlan.toUpperCase()}
+            </Badge>
+            <p className="text-muted mt-3 text-sm leading-6">
+              Free includes core clients, projects, timers, reports, and
+              invoices. Team adds team analytics. Pro adds proof tracking,
+              expenses, and scheduled reports.
+            </p>
+            {upgradeFeature ? (
+              <p className="text-primary mt-3 text-sm font-bold">
+                This feature is locked on your current plan.
+              </p>
+            ) : null}
+          </div>
+          <a
+            className="text-primary text-sm font-extrabold hover:underline"
+            href="/pricing"
+          >
+            View pricing
+          </a>
+        </div>
+      </SettingsCard>
 
       <form
         className="space-y-6"

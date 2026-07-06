@@ -1,8 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import type {
-  ScreenshotProof,
-  WorkLog,
-  WorkLogLocationProof,
+import {
+  planIncludes,
+  type ScreenshotProof,
+  type WorkLog,
+  type WorkLogLocationProof,
 } from '@clientflow/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
@@ -142,6 +143,10 @@ export function WorkLogTimerPanel({
   defaultClientId,
 }: WorkLogTimerPanelProps) {
   const { organization } = useAuth();
+  const proofTrackingEnabled = planIncludes(
+    organization?.subscriptionPlan,
+    'proofTracking',
+  );
   const queryClient = useQueryClient();
   const [gpsProofEnabled, setGpsProofEnabled] = useState(false);
   const clientsQuery = useClients({ search: '', status: 'all' });
@@ -171,9 +176,10 @@ export function WorkLogTimerPanel({
   });
   const startTimer = useMutation({
     mutationFn: async (values: WorkLogTimerValues) => {
-      const locationProof = gpsProofEnabled
-        ? await captureLocationProof()
-        : undefined;
+      const locationProof =
+        gpsProofEnabled && proofTrackingEnabled
+          ? await captureLocationProof()
+          : undefined;
       return workLogApi.startTimer({
         ...values,
         ...(locationProof ? { locationProof } : {}),
@@ -204,9 +210,10 @@ export function WorkLogTimerPanel({
   });
   const stopTimer = useMutation({
     mutationFn: async () => {
-      const locationProof = activeTimer?.timerStartLocation
-        ? await captureLocationProof()
-        : undefined;
+      const locationProof =
+        activeTimer?.timerStartLocation && proofTrackingEnabled
+          ? await captureLocationProof()
+          : undefined;
       return workLogApi.stopTimer({
         ...(locationProof ? { locationProof } : {}),
       });
@@ -225,7 +232,7 @@ export function WorkLogTimerPanel({
   const screenshotProofs = useQuery({
     queryKey: ['screenshot-proofs', activeTimer?.id],
     queryFn: () => workLogApi.listScreenshotProofs(activeTimer?.id ?? ''),
-    enabled: Boolean(activeTimer),
+    enabled: Boolean(activeTimer) && proofTrackingEnabled,
   });
   const captureScreenshot = useMutation({
     mutationFn: async () => {
@@ -299,6 +306,7 @@ export function WorkLogTimerPanel({
         activeTimer={activeTimer}
         captureScreenshotPending={captureScreenshot.isPending}
         deleteScreenshotPending={deleteScreenshot.isPending}
+        proofTrackingEnabled={proofTrackingEnabled}
         onStop={() => stopTimer.mutate()}
         onCaptureScreenshot={() => captureScreenshot.mutate()}
         onDeleteScreenshot={(proof) =>
@@ -414,6 +422,7 @@ export function WorkLogTimerPanel({
           <input
             checked={gpsProofEnabled}
             className="accent-primary mt-1"
+            disabled={!proofTrackingEnabled}
             onChange={(event) => setGpsProofEnabled(event.target.checked)}
             type="checkbox"
           />
@@ -422,8 +431,9 @@ export function WorkLogTimerPanel({
               <MapPin className="size-4" /> Save GPS proof for this timer
             </span>
             <span className="text-muted mt-1 block text-xs leading-5">
-              Browser permission is requested only when you start and stop the
-              timer. No background tracking is used.
+              {proofTrackingEnabled
+                ? 'Browser permission is requested only when you start and stop the timer. No background tracking is used.'
+                : 'Upgrade to Pro to capture GPS proof. Timers still work without proof tracking.'}
             </span>
           </span>
         </label>
@@ -459,6 +469,7 @@ function RunningTimerCard({
   onDownloadScreenshot,
   onStop,
   pending,
+  proofTrackingEnabled,
   screenshotProofs,
   screenshotProofsLoading,
 }: {
@@ -470,6 +481,7 @@ function RunningTimerCard({
   onDownloadScreenshot: (proof: ScreenshotProof) => void;
   onStop: () => void;
   pending: boolean;
+  proofTrackingEnabled: boolean;
   screenshotProofs: ScreenshotProof[];
   screenshotProofsLoading: boolean;
 }) {
@@ -527,20 +539,22 @@ function RunningTimerCard({
         </div>
 
         <div className="flex gap-2">
-          <Button
-            className="min-w-44"
-            disabled={captureScreenshotPending}
-            onClick={onCaptureScreenshot}
-            type="button"
-            variant="outline"
-          >
-            {captureScreenshotPending ? (
-              <LoaderCircle className="size-4 animate-spin" />
-            ) : (
-              <Camera className="size-4" />
-            )}
-            {captureScreenshotPending ? 'Capturing…' : 'Screenshot proof'}
-          </Button>
+          {proofTrackingEnabled ? (
+            <Button
+              className="min-w-44"
+              disabled={captureScreenshotPending}
+              onClick={onCaptureScreenshot}
+              type="button"
+              variant="outline"
+            >
+              {captureScreenshotPending ? (
+                <LoaderCircle className="size-4 animate-spin" />
+              ) : (
+                <Camera className="size-4" />
+              )}
+              {captureScreenshotPending ? 'Capturing…' : 'Screenshot proof'}
+            </Button>
+          ) : null}
           <Button
             className="min-w-36"
             disabled={pending}
@@ -557,66 +571,76 @@ function RunningTimerCard({
           </Button>
         </div>
       </div>
-      <div className="border-t border-white/10 px-6 py-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-extrabold">Screenshot proofs</p>
-            <p className="mt-1 text-xs text-white/55">
-              Manual capture only. The browser picker appears every time; no
-              silent screenshots.
+      {proofTrackingEnabled ? (
+        <div className="border-t border-white/10 px-6 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-extrabold">Screenshot proofs</p>
+              <p className="mt-1 text-xs text-white/55">
+                Manual capture only. The browser picker appears every time; no
+                silent screenshots.
+              </p>
+            </div>
+            <Badge variant="dark">
+              {screenshotProofs.length} proof
+              {screenshotProofs.length === 1 ? '' : 's'}
+            </Badge>
+          </div>
+          {screenshotProofsLoading ? (
+            <p className="mt-3 text-xs text-white/55">Loading proofs…</p>
+          ) : screenshotProofs.length ? (
+            <div className="mt-3 grid gap-2 md:grid-cols-2">
+              {screenshotProofs.map((proof) => (
+                <div
+                  className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
+                  key={proof.id}
+                >
+                  <div>
+                    <p className="text-xs font-bold">
+                      {new Date(proof.capturedAt).toLocaleString()}
+                    </p>
+                    <p className="text-[11px] text-white/50">
+                      {(proof.fileSize / 1024).toFixed(0)} KB
+                    </p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button
+                      onClick={() => onDownloadScreenshot(proof)}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Download className="size-4" />
+                    </Button>
+                    <Button
+                      className="text-danger hover:bg-danger/10"
+                      disabled={deleteScreenshotPending}
+                      onClick={() => onDeleteScreenshot(proof)}
+                      size="icon"
+                      type="button"
+                      variant="ghost"
+                    >
+                      <Trash2 className="size-4" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-white/55">
+              No screenshot proof captured for this timer yet.
             </p>
-          </div>
-          <Badge variant="dark">
-            {screenshotProofs.length} proof
-            {screenshotProofs.length === 1 ? '' : 's'}
-          </Badge>
+          )}
         </div>
-        {screenshotProofsLoading ? (
-          <p className="mt-3 text-xs text-white/55">Loading proofs…</p>
-        ) : screenshotProofs.length ? (
-          <div className="mt-3 grid gap-2 md:grid-cols-2">
-            {screenshotProofs.map((proof) => (
-              <div
-                className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/5 px-3 py-2"
-                key={proof.id}
-              >
-                <div>
-                  <p className="text-xs font-bold">
-                    {new Date(proof.capturedAt).toLocaleString()}
-                  </p>
-                  <p className="text-[11px] text-white/50">
-                    {(proof.fileSize / 1024).toFixed(0)} KB
-                  </p>
-                </div>
-                <div className="flex gap-1">
-                  <Button
-                    onClick={() => onDownloadScreenshot(proof)}
-                    size="icon"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <Download className="size-4" />
-                  </Button>
-                  <Button
-                    className="text-danger hover:bg-danger/10"
-                    disabled={deleteScreenshotPending}
-                    onClick={() => onDeleteScreenshot(proof)}
-                    size="icon"
-                    type="button"
-                    variant="ghost"
-                  >
-                    <Trash2 className="size-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-3 text-xs text-white/55">
-            No screenshot proof captured for this timer yet.
+      ) : (
+        <div className="border-t border-white/10 px-6 py-4">
+          <p className="text-sm font-extrabold">Screenshot and GPS proofs</p>
+          <p className="mt-1 text-xs text-white/55">
+            Proof tracking is available on the Pro plan. The timer remains fully
+            usable on Free and Team.
           </p>
-        )}
-      </div>
+        </div>
+      )}
     </Card>
   );
 }

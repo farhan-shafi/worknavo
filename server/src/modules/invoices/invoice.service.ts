@@ -1,4 +1,8 @@
-import type { Currency, InvoiceStatus } from '@clientflow/shared';
+import {
+  planIncludes,
+  type Currency,
+  type InvoiceStatus,
+} from '@clientflow/shared';
 import { Types, isValidObjectId, type FilterQuery } from 'mongoose';
 
 import { ClientModel, type ClientDocument } from '../../models/Client.model.js';
@@ -250,6 +254,10 @@ async function requireInvoiceExpenses(
 
   if (uniqueIds.length === 0) {
     return [];
+  }
+
+  if (!planIncludes(actor.organization.subscriptionPlan, 'expenses')) {
+    throw new ApiError(402, 'Pro plan is required to invoice expenses.');
   }
 
   const expenses = await ExpenseModel.find({

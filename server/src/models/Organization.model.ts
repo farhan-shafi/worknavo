@@ -1,6 +1,7 @@
 import type {
   Currency,
   Organization as OrganizationContract,
+  SubscriptionPlan,
   WorkspaceType,
 } from '@clientflow/shared';
 import { Schema, model, type HydratedDocument } from 'mongoose';
@@ -9,6 +10,7 @@ export interface Organization {
   name: string;
   slug: string;
   workspaceType: WorkspaceType;
+  subscriptionPlan: SubscriptionPlan;
   businessEmail?: string;
   businessAddress?: string;
   website?: string;
@@ -48,6 +50,13 @@ const organizationSchema = new Schema<Organization>(
       enum: ['solo', 'company'],
       default: 'solo',
       required: true,
+    },
+    subscriptionPlan: {
+      type: String,
+      enum: ['free', 'team', 'pro'],
+      default: 'free',
+      required: true,
+      index: true,
     },
     businessEmail: {
       type: String,
@@ -117,6 +126,7 @@ export function toOrganizationContract(
     name: organization.name,
     slug: organization.slug,
     workspaceType: organization.workspaceType,
+    subscriptionPlan: organization.subscriptionPlan ?? 'free',
     businessEmail: organization.businessEmail ?? null,
     businessAddress: organization.businessAddress ?? null,
     website: organization.website ?? null,
