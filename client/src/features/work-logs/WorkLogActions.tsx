@@ -1,14 +1,5 @@
 import type { WorkLog } from '@clientflow/shared';
-import {
-  CheckCircle2,
-  Copy,
-  Eye,
-  MoreHorizontal,
-  Pencil,
-  Send,
-  Trash2,
-  XCircle,
-} from 'lucide-react';
+import { Copy, Eye, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { Button } from '../../components/ui/button';
 import {
@@ -24,24 +15,16 @@ export function WorkLogActions({
   onDelete,
   onDuplicate,
   onEdit,
-  onApprove,
-  onReject,
-  onSubmitApproval,
   onView,
   workLog,
 }: {
   onDelete: () => void;
   onDuplicate?: () => void;
   onEdit: () => void;
-  onApprove?: () => void;
-  onReject?: () => void;
-  onSubmitApproval?: () => void;
   onView?: () => void;
   workLog: WorkLog;
 }) {
   const lockedByInvoice = Boolean(workLog.invoiceId);
-  const lockedByApproval = workLog.approvalStatus === 'approved';
-  const editLocked = lockedByInvoice || lockedByApproval;
 
   return (
     <DropdownMenu>
@@ -71,28 +54,12 @@ export function WorkLogActions({
             <Copy className="size-4" /> Duplicate entry
           </DropdownMenuItem>
         ) : null}
-        {onSubmitApproval &&
-        ['draft', 'rejected'].includes(workLog.approvalStatus) ? (
-          <DropdownMenuItem onSelect={onSubmitApproval}>
-            <Send className="size-4" /> Submit for approval
-          </DropdownMenuItem>
-        ) : null}
-        {onApprove && workLog.approvalStatus !== 'approved' ? (
-          <DropdownMenuItem onSelect={onApprove}>
-            <CheckCircle2 className="size-4" /> Approve
-          </DropdownMenuItem>
-        ) : null}
-        {onReject && workLog.approvalStatus !== 'rejected' ? (
-          <DropdownMenuItem onSelect={onReject}>
-            <XCircle className="size-4" /> Reject
-          </DropdownMenuItem>
-        ) : null}
-        <DropdownMenuItem disabled={editLocked} onSelect={onEdit}>
+        <DropdownMenuItem disabled={lockedByInvoice} onSelect={onEdit}>
           <Pencil className="size-4" /> Edit work log
         </DropdownMenuItem>
         <DropdownMenuItem
           className="text-danger data-[highlighted]:bg-danger/5"
-          disabled={editLocked}
+          disabled={lockedByInvoice}
           onSelect={onDelete}
         >
           <Trash2 className="size-4" /> Delete work log

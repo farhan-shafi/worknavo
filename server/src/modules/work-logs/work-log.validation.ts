@@ -116,10 +116,6 @@ export const listWorkLogsQuerySchema = z
     }
   });
 
-export const rejectWorkLogApprovalSchema = z.object({
-  reason: z.string().trim().max(1000).optional(),
-});
-
 export const createScreenshotProofSchema = z.object({
   imageDataUrl: z
     .string()
@@ -134,9 +130,6 @@ export type CreateWorkLogInput = z.infer<typeof createWorkLogSchema>;
 export type UpdateWorkLogInput = z.infer<typeof updateWorkLogSchema>;
 export type StartWorkLogTimerInput = z.infer<typeof startWorkLogTimerSchema>;
 export type StopWorkLogTimerInput = z.infer<typeof stopWorkLogTimerSchema>;
-export type RejectWorkLogApprovalInput = z.infer<
-  typeof rejectWorkLogApprovalSchema
->;
 export type CreateScreenshotProofInput = z.infer<
   typeof createScreenshotProofSchema
 >;

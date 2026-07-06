@@ -1,9 +1,4 @@
-import type {
-  WorkLog,
-  WorkLogApprovalStatus,
-  WorkLogBillingFilter,
-} from '@clientflow/shared';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import type { WorkLog, WorkLogBillingFilter } from '@clientflow/shared';
 import {
   BriefcaseBusiness,
   CalendarDays,
@@ -40,15 +35,8 @@ import { WorkLogFormDialog } from './WorkLogFormDialog';
 import { useWorkLogs } from './work-log.queries';
 import { WorkLogTimerPanel } from './WorkLogTimerPanel';
 import { formatHours, formatWorkLogDate } from './work-log.utils';
-import { useAuth } from '../auth/use-auth';
-import { workLogApi } from './work-log.api';
-import { workLogQueryKeys } from './work-log.queries';
-import { ApiError } from '../../lib/api-client';
-import { toast } from 'sonner';
 
 export function WorkLogsPage() {
-  const auth = useAuth();
-  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState('');
   const deferredSearch = useDeferredValue(search);
@@ -81,46 +69,6 @@ export function WorkLogsPage() {
     startDate,
     endDate,
   });
-  const canManageApprovals =
-    auth.permissions.includes('worklogs.manageAll') ||
-    auth.permissions.includes('worklogs.viewProject');
-  const approvalAction = useMutation({
-    mutationFn: ({
-      action,
-      reason,
-      workLogId,
-    }: {
-      action: 'approve' | 'reject' | 'submit';
-      reason?: string;
-      workLogId: string;
-    }) => {
-      if (action === 'approve') return workLogApi.approve(workLogId);
-      if (action === 'reject') return workLogApi.reject(workLogId, reason);
-      return workLogApi.submitApproval(workLogId);
-    },
-    onSuccess: ({ message }) => {
-      void queryClient.invalidateQueries({ queryKey: workLogQueryKeys.all });
-      toast.success(message ?? 'Approval status updated.');
-    },
-    onError: (error) => {
-      toast.error(
-        error instanceof ApiError
-          ? error.message
-          : 'Could not update approval status.',
-      );
-    },
-  });
-
-  const rejectWorkLog = (workLog: WorkLog) => {
-    const reason = window.prompt('Reason for rejection (optional)');
-    if (reason === null) return;
-    approvalAction.mutate({
-      action: 'reject',
-      reason,
-      workLogId: workLog.id,
-    });
-  };
-
   useEffect(() => {
     if (createRequested) {
       setEditingWorkLog(null);
@@ -236,42 +184,14 @@ export function WorkLogsPage() {
         ),
     },
     {
-      key: 'approval',
-      header: 'Approval',
-      render: (workLog) => (
-        <WorkLogApprovalBadge status={workLog.approvalStatus} />
-      ),
-    },
-    {
       key: 'actions',
       header: '',
       className: 'w-14 text-right',
       render: (workLog) => (
         <WorkLogActions
-          onApprove={
-            canManageApprovals
-              ? () =>
-                  approvalAction.mutate({
-                    action: 'approve',
-                    workLogId: workLog.id,
-                  })
-              : undefined
-          }
           onDelete={() => setDeletingWorkLog(workLog)}
           onDuplicate={() => openDuplicate(workLog)}
           onEdit={() => openEdit(workLog)}
-          onReject={
-            canManageApprovals ? () => rejectWorkLog(workLog) : undefined
-          }
-          onSubmitApproval={
-            canManageApprovals
-              ? undefined
-              : () =>
-                  approvalAction.mutate({
-                    action: 'submit',
-                    workLogId: workLog.id,
-                  })
-          }
           onView={() => setViewingWorkLog(workLog)}
           workLog={workLog}
         />
@@ -487,24 +407,10 @@ export function WorkLogsPage() {
               {workLogs.length > 0 ? (
                 workLogs.map((workLog) => (
                   <WorkLogMobileCard
-                    canManageApprovals={canManageApprovals}
                     key={workLog.id}
-                    onApprove={() =>
-                      approvalAction.mutate({
-                        action: 'approve',
-                        workLogId: workLog.id,
-                      })
-                    }
                     onDelete={() => setDeletingWorkLog(workLog)}
                     onDuplicate={() => openDuplicate(workLog)}
                     onEdit={() => openEdit(workLog)}
-                    onReject={() => rejectWorkLog(workLog)}
-                    onSubmitApproval={() =>
-                      approvalAction.mutate({
-                        action: 'submit',
-                        workLogId: workLog.id,
-                      })
-                    }
                     onView={() => setViewingWorkLog(workLog)}
                     workLog={workLog}
                   />
@@ -563,23 +469,15 @@ export function WorkLogsPage() {
 }
 
 function WorkLogMobileCard({
-  canManageApprovals,
-  onApprove,
   onDelete,
   onDuplicate,
   onEdit,
-  onReject,
-  onSubmitApproval,
   onView,
   workLog,
 }: {
-  canManageApprovals: boolean;
-  onApprove: () => void;
   onDelete: () => void;
   onDuplicate: () => void;
   onEdit: () => void;
-  onReject: () => void;
-  onSubmitApproval: () => void;
   onView: () => void;
   workLog: WorkLog;
 }) {
@@ -599,12 +497,9 @@ function WorkLogMobileCard({
           </Link>
         </div>
         <WorkLogActions
-          onApprove={canManageApprovals ? onApprove : undefined}
           onDelete={onDelete}
           onDuplicate={onDuplicate}
           onEdit={onEdit}
-          onReject={canManageApprovals ? onReject : undefined}
-          onSubmitApproval={canManageApprovals ? undefined : onSubmitApproval}
           onView={onView}
           workLog={workLog}
         />
@@ -621,7 +516,6 @@ function WorkLogMobileCard({
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <WorkLogBillingBadge billable={workLog.billable} />
-        <WorkLogApprovalBadge status={workLog.approvalStatus} />
         {workLog.timerStartLocation || workLog.timerStopLocation ? (
           <Badge variant="success">
             <MapPin className="size-3" /> GPS
@@ -635,24 +529,6 @@ function WorkLogMobileCard({
         ) : null}
       </div>
     </div>
-  );
-}
-
-function WorkLogApprovalBadge({ status }: { status: WorkLogApprovalStatus }) {
-  const variants: Record<
-    WorkLogApprovalStatus,
-    'neutral' | 'primary' | 'success' | 'danger'
-  > = {
-    draft: 'neutral',
-    submitted: 'primary',
-    approved: 'success',
-    rejected: 'danger',
-  };
-
-  return (
-    <Badge variant={variants[status]}>
-      {status === 'submitted' ? 'Pending approval' : status}
-    </Badge>
   );
 }
 

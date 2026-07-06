@@ -121,7 +121,7 @@ export function InvoicesPage() {
             </Button>
           </div>
         }
-        description="Create manual invoices or turn approved billable work into ready-to-send billing records."
+        description="Create manual invoices or turn billable work into ready-to-send billing records."
         eyebrow="Invoices"
         title="Billing operations"
       />

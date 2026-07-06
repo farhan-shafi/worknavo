@@ -47,7 +47,7 @@ const platformFeatures: Array<{
     icon: FileText,
     title: 'Reports and invoices',
     description:
-      'Turn approved billable work into client summaries, PDFs, emails, and invoices.',
+      'Turn billable work into client summaries, PDFs, emails, and invoices.',
   },
   {
     icon: BarChart3,

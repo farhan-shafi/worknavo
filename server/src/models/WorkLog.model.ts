@@ -1,7 +1,6 @@
 import type {
   Currency,
   WorkLog as WorkLogContract,
-  WorkLogApprovalStatus,
   WorkLogClient,
   WorkLogEntryMode,
   WorkLogProject,
@@ -36,11 +35,6 @@ export interface WorkLog {
   currency: Currency;
   entryMode: WorkLogEntryMode;
   status: WorkLogStatus;
-  approvalStatus: WorkLogApprovalStatus;
-  approvalRequestedAt?: Date;
-  approvedAt?: Date;
-  approvedByMembershipId?: Types.ObjectId;
-  rejectionReason?: string;
   timerStartedAt?: Date;
   timerStoppedAt?: Date;
   timerStartLocation?: LocationProofDocument;
@@ -167,25 +161,6 @@ const workLogSchema = new Schema<WorkLog>(
       required: true,
       index: true,
     },
-    approvalStatus: {
-      type: String,
-      enum: ['draft', 'submitted', 'approved', 'rejected'],
-      default: 'draft',
-      required: true,
-      index: true,
-    },
-    approvalRequestedAt: Date,
-    approvedAt: Date,
-    approvedByMembershipId: {
-      type: Schema.Types.ObjectId,
-      ref: 'OrganizationMembership',
-      index: true,
-    },
-    rejectionReason: {
-      type: String,
-      trim: true,
-      maxlength: 1000,
-    },
     timerStartedAt: Date,
     timerStoppedAt: Date,
     timerStartLocation: locationProofSchema,
@@ -236,11 +211,6 @@ export function toWorkLogContract(
       : 0,
     entryMode: workLog.entryMode ?? 'manual',
     status: workLog.status ?? 'completed',
-    approvalStatus: workLog.approvalStatus ?? 'draft',
-    approvalRequestedAt: workLog.approvalRequestedAt?.toISOString() ?? null,
-    approvedAt: workLog.approvedAt?.toISOString() ?? null,
-    approvedByMembershipId: workLog.approvedByMembershipId?.toString() ?? null,
-    rejectionReason: workLog.rejectionReason ?? null,
     timerStartedAt: workLog.timerStartedAt?.toISOString() ?? null,
     timerStoppedAt: workLog.timerStoppedAt?.toISOString() ?? null,
     timerStartLocation: workLog.timerStartLocation

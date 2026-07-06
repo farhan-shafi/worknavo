@@ -17,7 +17,6 @@ import { ProjectAssignmentModel } from '../../models/ProjectAssignment.model.js'
 import { WorkCategoryModel } from '../../models/WorkCategory.model.js';
 import { WeeklyReportModel } from '../../models/WeeklyReport.model.js';
 import { AuditEventModel } from '../../models/AuditEvent.model.js';
-import { NotificationModel } from '../../models/Notification.model.js';
 import {
   ScreenshotProofModel,
   toScreenshotProofContract,
@@ -41,7 +40,6 @@ import {
 import type {
   CreateWorkLogInput,
   CreateScreenshotProofInput,
-  RejectWorkLogApprovalInput,
   StartWorkLogTimerInput,
   StopWorkLogTimerInput,
   UpdateWorkLogInput,
@@ -451,7 +449,7 @@ function canManageWorkLog(actor: WorkspaceActor) {
 function assertCanMutateWorkLog(
   actor: WorkspaceActor,
   workLog: WorkLogDocument,
-  action: 'delete' | 'edit' | 'submit',
+  action: 'delete' | 'edit',
 ) {
   const ownsLog = sameObjectId(workLog.membershipId, actor.membership._id);
 
@@ -460,12 +458,6 @@ function assertCanMutateWorkLog(
     !canManageWorkLog(actor)
   ) {
     throw new ApiError(403, `You cannot ${action} this work log.`);
-  }
-}
-
-function assertApprovalManager(actor: WorkspaceActor) {
-  if (!canManageWorkLog(actor)) {
-    throw new ApiError(403, 'You cannot approve or reject work logs.');
   }
 }
 
@@ -722,15 +714,6 @@ export async function updateWorkLog(
   }
 
   assertCanMutateWorkLog(actor, currentWorkLog, 'edit');
-  if (
-    currentWorkLog.approvalStatus === 'approved' &&
-    !canManageWorkLog(actor)
-  ) {
-    throw new ApiError(
-      409,
-      'This work log is approved and can only be corrected by a manager.',
-    );
-  }
 
   const finalReport = await WeeklyReportModel.exists({
     organizationId: actor.organization._id,
@@ -846,15 +829,6 @@ export async function deleteWorkLog(actor: WorkspaceActor, workLogId: string) {
   assertWorkLogEditWindow(actor, existingWorkLog);
 
   assertCanMutateWorkLog(actor, existingWorkLog, 'delete');
-  if (
-    existingWorkLog.approvalStatus === 'approved' &&
-    !canManageWorkLog(actor)
-  ) {
-    throw new ApiError(
-      409,
-      'This work log is approved and can only be deleted by a manager.',
-    );
-  }
 
   const workLog = await WorkLogModel.findOneAndDelete({
     _id: workLogId,
@@ -864,161 +838,6 @@ export async function deleteWorkLog(actor: WorkspaceActor, workLogId: string) {
   if (!workLog) {
     throw new ApiError(404, 'Work log not found.');
   }
-}
-
-async function approvalWorkLog(actor: WorkspaceActor, workLogId: string) {
-  requireValidWorkLogId(workLogId);
-  const workLog = await WorkLogModel.findOne({
-    _id: workLogId,
-    ...(await workLogVisibilityQuery(actor)),
-  });
-
-  if (!workLog) {
-    throw new ApiError(404, 'Work log not found.');
-  }
-
-  if (workLog.status === 'running') {
-    throw new ApiError(409, 'Stop the timer before changing approval status.');
-  }
-
-  return workLog;
-}
-
-export async function submitWorkLogForApproval(
-  actor: WorkspaceActor,
-  workLogId: string,
-) {
-  const workLog = await approvalWorkLog(actor, workLogId);
-  assertCanMutateWorkLog(actor, workLog, 'submit');
-
-  if (workLog.approvalStatus === 'approved') {
-    throw new ApiError(409, 'Approved work logs cannot be resubmitted.');
-  }
-
-  workLog.approvalStatus = 'submitted';
-  workLog.approvalRequestedAt = new Date();
-  workLog.approvedAt = undefined;
-  workLog.approvedByMembershipId = undefined;
-  workLog.rejectionReason = undefined;
-  await workLog.save();
-
-  await AuditEventModel.create({
-    organizationId: actor.organization._id,
-    actorMembershipId: actor.membership._id,
-    entityType: 'work_log',
-    entityId: workLog._id,
-    action: 'worklog.submitted',
-    summary: { title: workLog.title },
-  });
-
-  const { client, project } = await requireWorkLogRelations(
-    actor,
-    workLog.clientId.toString(),
-    workLog.projectId.toString(),
-    workLog.categoryId?.toString(),
-  );
-
-  return visibleWorkLogContract(
-    actor,
-    workLog,
-    clientContract(client),
-    projectContract(project),
-  );
-}
-
-export async function approveWorkLog(actor: WorkspaceActor, workLogId: string) {
-  assertApprovalManager(actor);
-  const workLog = await approvalWorkLog(actor, workLogId);
-
-  workLog.approvalStatus = 'approved';
-  workLog.approvedAt = new Date();
-  workLog.approvedByMembershipId = actor.membership._id;
-  workLog.rejectionReason = undefined;
-  await workLog.save();
-
-  await Promise.all([
-    AuditEventModel.create({
-      organizationId: actor.organization._id,
-      actorMembershipId: actor.membership._id,
-      entityType: 'work_log',
-      entityId: workLog._id,
-      action: 'worklog.approved',
-      summary: { title: workLog.title },
-    }),
-    NotificationModel.create({
-      organizationId: actor.organization._id,
-      recipientMembershipId: workLog.membershipId,
-      type: 'worklog_approved',
-      title: 'Work log approved',
-      message: `${workLog.title} was approved.`,
-      targetUrl: '/app/work-logs',
-    }),
-  ]);
-
-  const { client, project } = await requireWorkLogRelations(
-    actor,
-    workLog.clientId.toString(),
-    workLog.projectId.toString(),
-    workLog.categoryId?.toString(),
-  );
-
-  return visibleWorkLogContract(
-    actor,
-    workLog,
-    clientContract(client),
-    projectContract(project),
-  );
-}
-
-export async function rejectWorkLog(
-  actor: WorkspaceActor,
-  workLogId: string,
-  input: RejectWorkLogApprovalInput,
-) {
-  assertApprovalManager(actor);
-  const workLog = await approvalWorkLog(actor, workLogId);
-  const reason = input.reason?.trim();
-
-  workLog.approvalStatus = 'rejected';
-  workLog.approvedAt = undefined;
-  workLog.approvedByMembershipId = undefined;
-  workLog.rejectionReason = reason || undefined;
-  await workLog.save();
-
-  await Promise.all([
-    AuditEventModel.create({
-      organizationId: actor.organization._id,
-      actorMembershipId: actor.membership._id,
-      entityType: 'work_log',
-      entityId: workLog._id,
-      action: 'worklog.rejected',
-      summary: { title: workLog.title, reason: reason ?? null },
-    }),
-    NotificationModel.create({
-      organizationId: actor.organization._id,
-      recipientMembershipId: workLog.membershipId,
-      type: 'worklog_rejected',
-      title: 'Work log needs changes',
-      message: reason
-        ? `${workLog.title} was rejected: ${reason}`
-        : `${workLog.title} was rejected.`,
-      targetUrl: '/app/work-logs',
-    }),
-  ]);
-
-  const { client, project } = await requireWorkLogRelations(
-    actor,
-    workLog.clientId.toString(),
-    workLog.projectId.toString(),
-    workLog.categoryId?.toString(),
-  );
-
-  return visibleWorkLogContract(
-    actor,
-    workLog,
-    clientContract(client),
-    projectContract(project),
-  );
 }
 
 async function visibleWorkLogForProof(

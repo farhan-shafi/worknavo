@@ -10,7 +10,6 @@ import type { Request, Response } from 'express';
 import { ApiError } from '../../utils/api-error.js';
 import { workspaceActor } from '../../auth/workspace-context.js';
 import {
-  approveWorkLog as approveWorkLogService,
   createScreenshotProof as createScreenshotProofService,
   createWorkLog as createWorkLogService,
   deleteScreenshotProof as deleteScreenshotProofService,
@@ -19,17 +18,14 @@ import {
   getWorkLog,
   listScreenshotProofs as listScreenshotProofsService,
   listWorkLogs as listWorkLogsService,
-  rejectWorkLog as rejectWorkLogService,
   startWorkLogTimer as startWorkLogTimerService,
   stopWorkLogTimer as stopWorkLogTimerService,
-  submitWorkLogForApproval as submitWorkLogForApprovalService,
   updateWorkLog as updateWorkLogService,
 } from './work-log.service.js';
 import {
   createScreenshotProofSchema,
   createWorkLogSchema,
   listWorkLogsQuerySchema,
-  rejectWorkLogApprovalSchema,
   startWorkLogTimerSchema,
   stopWorkLogTimerSchema,
   updateWorkLogSchema,
@@ -128,12 +124,6 @@ export async function showWorkLog(request: Request, response: Response) {
         amount: canSeeMoney ? amount : 0,
         entryMode: workLog.entryMode,
         status: workLog.status,
-        approvalStatus: workLog.approvalStatus ?? 'draft',
-        approvalRequestedAt: workLog.approvalRequestedAt?.toISOString() ?? null,
-        approvedAt: workLog.approvedAt?.toISOString() ?? null,
-        approvedByMembershipId:
-          workLog.approvedByMembershipId?.toString() ?? null,
-        rejectionReason: workLog.rejectionReason ?? null,
         timerStartedAt: workLog.timerStartedAt?.toISOString() ?? null,
         timerStoppedAt: workLog.timerStoppedAt?.toISOString() ?? null,
         timerStartLocation: workLog.timerStartLocation
@@ -182,47 +172,6 @@ export async function updateWorkLog(request: Request, response: Response) {
 export async function deleteWorkLog(request: Request, response: Response) {
   await deleteWorkLogService(workspaceActor(request), workLogId(request));
   const body: MessageResponse = { message: 'Work log deleted successfully.' };
-  response.status(200).json(body);
-}
-
-export async function submitWorkLogForApproval(
-  request: Request,
-  response: Response,
-) {
-  const workLog = await submitWorkLogForApprovalService(
-    workspaceActor(request),
-    workLogId(request),
-  );
-  const body: WorkLogResponse = {
-    message: 'Work log submitted for approval.',
-    workLog,
-  };
-  response.status(200).json(body);
-}
-
-export async function approveWorkLog(request: Request, response: Response) {
-  const workLog = await approveWorkLogService(
-    workspaceActor(request),
-    workLogId(request),
-  );
-  const body: WorkLogResponse = {
-    message: 'Work log approved.',
-    workLog,
-  };
-  response.status(200).json(body);
-}
-
-export async function rejectWorkLog(request: Request, response: Response) {
-  const input = rejectWorkLogApprovalSchema.parse(request.body);
-  const workLog = await rejectWorkLogService(
-    workspaceActor(request),
-    workLogId(request),
-    input,
-  );
-  const body: WorkLogResponse = {
-    message: 'Work log rejected.',
-    workLog,
-  };
   response.status(200).json(body);
 }
 

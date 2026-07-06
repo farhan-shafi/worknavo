@@ -2,7 +2,6 @@ import { Router } from 'express';
 
 import { requireAuth } from '../../middleware/auth.middleware.js';
 import {
-  approveWorkLog,
   createScreenshotProof,
   createWorkLog,
   deleteScreenshotProof,
@@ -10,11 +9,9 @@ import {
   downloadScreenshotProof,
   listWorkLogs,
   listScreenshotProofs,
-  rejectWorkLog,
   showWorkLog,
   startWorkLogTimer,
   stopWorkLogTimer,
-  submitWorkLogForApproval,
   updateWorkLog,
 } from './work-log.controller.js';
 
@@ -24,9 +21,6 @@ workLogRouter.use(requireAuth);
 workLogRouter.post('/timer/start', startWorkLogTimer);
 workLogRouter.post('/timer/stop', stopWorkLogTimer);
 workLogRouter.route('/').get(listWorkLogs).post(createWorkLog);
-workLogRouter.post('/:id/submit-approval', submitWorkLogForApproval);
-workLogRouter.post('/:id/approve', approveWorkLog);
-workLogRouter.post('/:id/reject', rejectWorkLog);
 workLogRouter
   .route('/:id/screenshot-proofs')
   .get(listScreenshotProofs)

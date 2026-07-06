@@ -223,11 +223,6 @@ export interface WorkLogProject {
 export type WorkLogBillingFilter = 'all' | 'billable' | 'non-billable';
 export type WorkLogEntryMode = 'manual' | 'timer';
 export type WorkLogStatus = 'completed' | 'running';
-export type WorkLogApprovalStatus =
-  | 'draft'
-  | 'submitted'
-  | 'approved'
-  | 'rejected';
 
 export interface WorkLogLocationProof {
   latitude: number;
@@ -257,11 +252,6 @@ export interface WorkLog {
   amount: number;
   entryMode: WorkLogEntryMode;
   status: WorkLogStatus;
-  approvalStatus: WorkLogApprovalStatus;
-  approvalRequestedAt: string | null;
-  approvedAt: string | null;
-  approvedByMembershipId: string | null;
-  rejectionReason: string | null;
   timerStartedAt: string | null;
   timerStoppedAt: string | null;
   timerStartLocation: WorkLogLocationProof | null;

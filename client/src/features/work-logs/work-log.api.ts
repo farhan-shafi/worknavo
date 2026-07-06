@@ -95,19 +95,6 @@ export const workLogApi = {
       method: 'PATCH',
       body: JSON.stringify(workLogInput(values)),
     }),
-  submitApproval: (workLogId: string) =>
-    request<WorkLogResponse>(`/work-logs/${workLogId}/submit-approval`, {
-      method: 'POST',
-    }),
-  approve: (workLogId: string) =>
-    request<WorkLogResponse>(`/work-logs/${workLogId}/approve`, {
-      method: 'POST',
-    }),
-  reject: (workLogId: string, reason?: string) =>
-    request<WorkLogResponse>(`/work-logs/${workLogId}/reject`, {
-      method: 'POST',
-      body: JSON.stringify({ reason: reason?.trim() || undefined }),
-    }),
   listScreenshotProofs: (workLogId: string) =>
     request<ScreenshotProofListResponse>(
       `/work-logs/${workLogId}/screenshot-proofs`,
