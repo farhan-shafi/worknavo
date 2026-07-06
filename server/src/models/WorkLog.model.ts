@@ -9,6 +9,13 @@ import type {
 } from '@clientflow/shared';
 import { Schema, model, type HydratedDocument, type Types } from 'mongoose';
 
+interface LocationProofDocument {
+  latitude: number;
+  longitude: number;
+  accuracy?: number | null;
+  capturedAt: Date;
+}
+
 export interface WorkLog {
   userId: Types.ObjectId;
   organizationId: Types.ObjectId;
@@ -36,11 +43,23 @@ export interface WorkLog {
   rejectionReason?: string;
   timerStartedAt?: Date;
   timerStoppedAt?: Date;
+  timerStartLocation?: LocationProofDocument;
+  timerStopLocation?: LocationProofDocument;
   createdAt: Date;
   updatedAt: Date;
 }
 
 export type WorkLogDocument = HydratedDocument<WorkLog>;
+
+const locationProofSchema = new Schema(
+  {
+    latitude: { type: Number, required: true, min: -90, max: 90 },
+    longitude: { type: Number, required: true, min: -180, max: 180 },
+    accuracy: { type: Number, min: 0 },
+    capturedAt: { type: Date, required: true },
+  },
+  { _id: false },
+);
 
 const workLogSchema = new Schema<WorkLog>(
   {
@@ -169,6 +188,8 @@ const workLogSchema = new Schema<WorkLog>(
     },
     timerStartedAt: Date,
     timerStoppedAt: Date,
+    timerStartLocation: locationProofSchema,
+    timerStopLocation: locationProofSchema,
   },
   {
     timestamps: true,
@@ -222,6 +243,22 @@ export function toWorkLogContract(
     rejectionReason: workLog.rejectionReason ?? null,
     timerStartedAt: workLog.timerStartedAt?.toISOString() ?? null,
     timerStoppedAt: workLog.timerStoppedAt?.toISOString() ?? null,
+    timerStartLocation: workLog.timerStartLocation
+      ? {
+          latitude: workLog.timerStartLocation.latitude,
+          longitude: workLog.timerStartLocation.longitude,
+          accuracy: workLog.timerStartLocation.accuracy ?? null,
+          capturedAt: workLog.timerStartLocation.capturedAt.toISOString(),
+        }
+      : null,
+    timerStopLocation: workLog.timerStopLocation
+      ? {
+          latitude: workLog.timerStopLocation.latitude,
+          longitude: workLog.timerStopLocation.longitude,
+          accuracy: workLog.timerStopLocation.accuracy ?? null,
+          capturedAt: workLog.timerStopLocation.capturedAt.toISOString(),
+        }
+      : null,
     createdAt: workLog.createdAt.toISOString(),
     updatedAt: workLog.updatedAt.toISOString(),
   };

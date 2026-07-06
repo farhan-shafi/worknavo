@@ -24,6 +24,7 @@ import {
   listWorkLogsQuerySchema,
   rejectWorkLogApprovalSchema,
   startWorkLogTimerSchema,
+  stopWorkLogTimerSchema,
   updateWorkLogSchema,
 } from './work-log.validation.js';
 
@@ -70,7 +71,8 @@ export async function startWorkLogTimer(request: Request, response: Response) {
 }
 
 export async function stopWorkLogTimer(request: Request, response: Response) {
-  const workLog = await stopWorkLogTimerService(workspaceActor(request));
+  const input = stopWorkLogTimerSchema.parse(request.body);
+  const workLog = await stopWorkLogTimerService(workspaceActor(request), input);
   const body: WorkLogResponse = {
     message: 'Timer stopped and work log saved.',
     workLog,
@@ -127,6 +129,22 @@ export async function showWorkLog(request: Request, response: Response) {
         rejectionReason: workLog.rejectionReason ?? null,
         timerStartedAt: workLog.timerStartedAt?.toISOString() ?? null,
         timerStoppedAt: workLog.timerStoppedAt?.toISOString() ?? null,
+        timerStartLocation: workLog.timerStartLocation
+          ? {
+              latitude: workLog.timerStartLocation.latitude,
+              longitude: workLog.timerStartLocation.longitude,
+              accuracy: workLog.timerStartLocation.accuracy ?? null,
+              capturedAt: workLog.timerStartLocation.capturedAt.toISOString(),
+            }
+          : null,
+        timerStopLocation: workLog.timerStopLocation
+          ? {
+              latitude: workLog.timerStopLocation.latitude,
+              longitude: workLog.timerStopLocation.longitude,
+              accuracy: workLog.timerStopLocation.accuracy ?? null,
+              capturedAt: workLog.timerStopLocation.capturedAt.toISOString(),
+            }
+          : null,
         createdAt: workLog.createdAt.toISOString(),
         updatedAt: workLog.updatedAt.toISOString(),
       };

@@ -1,5 +1,6 @@
 import type {
   MessageResponse,
+  WorkLogLocationProof,
   WorkLogListResponse,
   WorkLogResponse,
 } from '@clientflow/shared';
@@ -11,6 +12,8 @@ import type {
   WorkLogTimerValues,
 } from './work-log.schemas';
 import { parseTagInput } from './work-log.utils';
+
+export type TimerLocationProofInput = WorkLogLocationProof;
 
 function queryString(filters: WorkLogFilters) {
   const params = new URLSearchParams();
@@ -49,7 +52,11 @@ function workLogInput(values: WorkLogFormValues) {
   };
 }
 
-function timerInput(values: WorkLogTimerValues) {
+function timerInput(
+  values: WorkLogTimerValues & {
+    locationProof?: TimerLocationProofInput;
+  },
+) {
   return {
     ...values,
     description: values.description?.trim() || null,
@@ -69,14 +76,17 @@ export const workLogApi = {
       method: 'POST',
       body: JSON.stringify(workLogInput(values)),
     }),
-  startTimer: (values: WorkLogTimerValues) =>
+  startTimer: (
+    values: WorkLogTimerValues & { locationProof?: TimerLocationProofInput },
+  ) =>
     request<WorkLogResponse>('/work-logs/timer/start', {
       method: 'POST',
       body: JSON.stringify(timerInput(values)),
     }),
-  stopTimer: () =>
+  stopTimer: (values?: { locationProof?: TimerLocationProofInput }) =>
     request<WorkLogResponse>('/work-logs/timer/stop', {
       method: 'POST',
+      body: JSON.stringify(values ?? {}),
     }),
   update: (workLogId: string, values: WorkLogFormValues) =>
     request<WorkLogResponse>(`/work-logs/${workLogId}`, {

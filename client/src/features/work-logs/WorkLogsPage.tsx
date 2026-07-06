@@ -9,6 +9,7 @@ import {
   CalendarDays,
   Clock3,
   Copy,
+  MapPin,
   Plus,
   Search,
 } from 'lucide-react';
@@ -219,6 +220,18 @@ export function WorkLogsPage() {
       key: 'billing',
       header: 'Billing',
       render: (workLog) => <WorkLogBillingBadge billable={workLog.billable} />,
+    },
+    {
+      key: 'proof',
+      header: 'Proof',
+      render: (workLog) =>
+        workLog.timerStartLocation || workLog.timerStopLocation ? (
+          <Badge variant="success">
+            <MapPin className="size-3" /> GPS
+          </Badge>
+        ) : (
+          <span className="text-muted text-xs">—</span>
+        ),
     },
     {
       key: 'approval',
@@ -595,6 +608,11 @@ function WorkLogMobileCard({
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <WorkLogBillingBadge billable={workLog.billable} />
         <WorkLogApprovalBadge status={workLog.approvalStatus} />
+        {workLog.timerStartLocation || workLog.timerStopLocation ? (
+          <Badge variant="success">
+            <MapPin className="size-3" /> GPS
+          </Badge>
+        ) : null}
         <Badge variant="neutral">{formatHours(workLog.durationHours)}</Badge>
         {workLog.billable ? (
           <Badge variant="neutral">

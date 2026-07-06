@@ -35,6 +35,7 @@ import type {
   CreateWorkLogInput,
   RejectWorkLogApprovalInput,
   StartWorkLogTimerInput,
+  StopWorkLogTimerInput,
   UpdateWorkLogInput,
 } from './work-log.validation.js';
 import { evaluateProjectBudgetAlerts } from '../projects/budget-alerts.service.js';
@@ -555,6 +556,7 @@ export async function startWorkLogTimer(
   input: StartWorkLogTimerInput,
 ) {
   assertActorPermission(actor, 'worklogs.createOwn');
+  const { locationProof, ...workLogInput } = input;
   const existingTimer = await WorkLogModel.findOne(runningTimerQuery(actor));
 
   if (existingTimer) {
@@ -576,8 +578,8 @@ export async function startWorkLogTimer(
   });
   const startedAt = new Date();
   const workLog = await WorkLogModel.create({
-    ...input,
-    tags: input.tags ?? [],
+    ...workLogInput,
+    tags: workLogInput.tags ?? [],
     userId: actor.user._id,
     organizationId: actor.organization._id,
     membershipId: actor.membership._id,
@@ -592,6 +594,7 @@ export async function startWorkLogTimer(
     entryMode: 'timer',
     status: 'running',
     timerStartedAt: startedAt,
+    ...(locationProof ? { timerStartLocation: locationProof } : {}),
   });
 
   return visibleWorkLogContract(
@@ -602,7 +605,10 @@ export async function startWorkLogTimer(
   );
 }
 
-export async function stopWorkLogTimer(actor: WorkspaceActor) {
+export async function stopWorkLogTimer(
+  actor: WorkspaceActor,
+  input: StopWorkLogTimerInput = {},
+) {
   assertActorPermission(actor, 'worklogs.createOwn');
   const workLog = await WorkLogModel.findOne(runningTimerQuery(actor));
 
@@ -615,6 +621,9 @@ export async function stopWorkLogTimer(actor: WorkspaceActor) {
   workLog.durationHours = timerDurationHours(workLog.timerStartedAt, stoppedAt);
   workLog.status = 'completed';
   workLog.workDate = workLog.timerStartedAt;
+  if (input.locationProof) {
+    workLog.timerStopLocation = input.locationProof;
+  }
   await workLog.save();
   await evaluateProjectBudgetAlerts(actor.organization, workLog.projectId);
 

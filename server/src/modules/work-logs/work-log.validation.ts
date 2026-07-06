@@ -40,6 +40,15 @@ const booleanField = z.preprocess((value) => {
   return value;
 }, z.boolean());
 
+const locationProofSchema = z
+  .object({
+    latitude: z.coerce.number().min(-90).max(90),
+    longitude: z.coerce.number().min(-180).max(180),
+    accuracy: z.coerce.number().min(0).nullable().optional(),
+    capturedAt: z.coerce.date().default(() => new Date()),
+  })
+  .optional();
+
 const workLogFields = {
   clientId: z.string().trim().min(1, 'Select a client.'),
   projectId: z.string().trim().min(1, 'Select a project.'),
@@ -69,6 +78,11 @@ export const startWorkLogTimerSchema = z.object({
   categoryId: optionalText(80),
   tags: tagsSchema,
   billable: booleanField.default(true),
+  locationProof: locationProofSchema,
+});
+
+export const stopWorkLogTimerSchema = z.object({
+  locationProof: locationProofSchema,
 });
 
 export const listWorkLogsQuerySchema = z
@@ -109,6 +123,7 @@ export const rejectWorkLogApprovalSchema = z.object({
 export type CreateWorkLogInput = z.infer<typeof createWorkLogSchema>;
 export type UpdateWorkLogInput = z.infer<typeof updateWorkLogSchema>;
 export type StartWorkLogTimerInput = z.infer<typeof startWorkLogTimerSchema>;
+export type StopWorkLogTimerInput = z.infer<typeof stopWorkLogTimerSchema>;
 export type RejectWorkLogApprovalInput = z.infer<
   typeof rejectWorkLogApprovalSchema
 >;

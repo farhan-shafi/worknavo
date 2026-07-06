@@ -229,6 +229,13 @@ export type WorkLogApprovalStatus =
   | 'approved'
   | 'rejected';
 
+export interface WorkLogLocationProof {
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
+  capturedAt: string;
+}
+
 export interface WorkLog {
   id: string;
   clientId: string;
@@ -257,6 +264,8 @@ export interface WorkLog {
   rejectionReason: string | null;
   timerStartedAt: string | null;
   timerStoppedAt: string | null;
+  timerStartLocation: WorkLogLocationProof | null;
+  timerStopLocation: WorkLogLocationProof | null;
   createdAt: string;
   updatedAt: string;
 }

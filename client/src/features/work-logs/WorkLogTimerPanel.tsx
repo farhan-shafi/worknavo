@@ -1,8 +1,8 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import type { WorkLog } from '@clientflow/shared';
+import type { WorkLog, WorkLogLocationProof } from '@clientflow/shared';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatDistanceToNowStrict } from 'date-fns';
-import { LoaderCircle, PauseCircle, PlayCircle } from 'lucide-react';
+import { LoaderCircle, MapPin, PauseCircle, PlayCircle } from 'lucide-react';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
@@ -41,12 +41,49 @@ function defaultValues(defaultClientId?: string): WorkLogTimerValues {
   };
 }
 
+async function captureLocationProof(): Promise<
+  WorkLogLocationProof | undefined
+> {
+  if (!('geolocation' in navigator)) {
+    toast.warning('GPS proof is not available in this browser.');
+    return undefined;
+  }
+
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: Number.isFinite(position.coords.accuracy)
+            ? position.coords.accuracy
+            : null,
+          capturedAt: new Date().toISOString(),
+        });
+      },
+      () => {
+        toast.warning('GPS proof was skipped.', {
+          description:
+            'Location permission was denied or unavailable. The timer will still work.',
+        });
+        resolve(undefined);
+      },
+      {
+        enableHighAccuracy: false,
+        maximumAge: 60_000,
+        timeout: 8_000,
+      },
+    );
+  });
+}
+
 export function WorkLogTimerPanel({
   activeTimer,
   defaultClientId,
 }: WorkLogTimerPanelProps) {
   const { organization } = useAuth();
   const queryClient = useQueryClient();
+  const [gpsProofEnabled, setGpsProofEnabled] = useState(false);
   const clientsQuery = useClients({ search: '', status: 'all' });
   const form = useForm<WorkLogTimerValues>({
     resolver: zodResolver(workLogTimerSchema),
@@ -73,7 +110,15 @@ export function WorkLogTimerPanel({
     enabled: Boolean(selectedProjectId),
   });
   const startTimer = useMutation({
-    mutationFn: (values: WorkLogTimerValues) => workLogApi.startTimer(values),
+    mutationFn: async (values: WorkLogTimerValues) => {
+      const locationProof = gpsProofEnabled
+        ? await captureLocationProof()
+        : undefined;
+      return workLogApi.startTimer({
+        ...values,
+        ...(locationProof ? { locationProof } : {}),
+      });
+    },
     onSuccess: ({ message }) => {
       void queryClient.invalidateQueries({ queryKey: workLogQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: clientQueryKeys.all });
@@ -98,7 +143,14 @@ export function WorkLogTimerPanel({
     },
   });
   const stopTimer = useMutation({
-    mutationFn: () => workLogApi.stopTimer(),
+    mutationFn: async () => {
+      const locationProof = activeTimer?.timerStartLocation
+        ? await captureLocationProof()
+        : undefined;
+      return workLogApi.stopTimer({
+        ...(locationProof ? { locationProof } : {}),
+      });
+    },
     onSuccess: ({ message }) => {
       void queryClient.invalidateQueries({ queryKey: workLogQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: clientQueryKeys.all });
@@ -239,6 +291,23 @@ export function WorkLogTimerPanel({
             <option value="false">Non-billable</option>
           </Select>
         </FormControl>
+        <label className="border-border bg-surface flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm lg:col-span-full">
+          <input
+            checked={gpsProofEnabled}
+            className="accent-primary mt-1"
+            onChange={(event) => setGpsProofEnabled(event.target.checked)}
+            type="checkbox"
+          />
+          <span>
+            <span className="flex items-center gap-1.5 font-extrabold">
+              <MapPin className="size-4" /> Save GPS proof for this timer
+            </span>
+            <span className="text-muted mt-1 block text-xs leading-5">
+              Browser permission is requested only when you start and stop the
+              timer. No background tracking is used.
+            </span>
+          </span>
+        </label>
         <div className="lg:self-end">
           <Button
             className="w-full"
@@ -308,6 +377,11 @@ function RunningTimerCard({
           <p className="mt-3 text-xs font-semibold text-white/55">
             Started {formatDistanceToNowStrict(startedAt, { addSuffix: true })}
           </p>
+          {activeTimer.timerStartLocation ? (
+            <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-white/55">
+              <MapPin className="size-3.5" /> GPS proof active for start/stop
+            </p>
+          ) : null}
         </div>
 
         <div>
