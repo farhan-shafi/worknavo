@@ -13,7 +13,7 @@ import { OrganizationMembershipModel } from '../models/OrganizationMembership.mo
 import { ProjectAssignmentModel } from '../models/ProjectAssignment.model.js';
 import { WorkCategoryModel } from '../models/WorkCategory.model.js';
 
-const DEMO_EMAIL = 'demo@clientflow.local';
+const DEMO_EMAIL = 'demo@worknavo.local';
 const DEMO_PASSWORD = 'DemoPass123';
 
 function daysAgo(days: number) {
@@ -293,19 +293,19 @@ async function seedDemo() {
   const demoPeople = [
     {
       name: 'Priya Shah',
-      email: 'manager@clientflow.local',
+      email: 'manager@worknavo.local',
       role: 'project_manager' as const,
       title: 'Delivery Lead',
     },
     {
       name: 'Sam Rivera',
-      email: 'finance@clientflow.local',
+      email: 'finance@worknavo.local',
       role: 'finance' as const,
       title: 'Finance Manager',
     },
     {
       name: 'Jordan Lee',
-      email: 'member@clientflow.local',
+      email: 'member@worknavo.local',
       role: 'member' as const,
       title: 'Product Designer',
     },
@@ -376,11 +376,11 @@ async function seedDemo() {
     },
   ]);
 
-  console.info('ClientFlow demo workspace is ready.');
+  console.info('WorkNavo demo workspace is ready.');
   console.info(`Email: ${DEMO_EMAIL}`);
   console.info(`Password: ${DEMO_PASSWORD}`);
   console.info(
-    'Additional users: manager@clientflow.local, finance@clientflow.local, member@clientflow.local',
+    'Additional users: manager@worknavo.local, finance@worknavo.local, member@worknavo.local',
   );
 }
 

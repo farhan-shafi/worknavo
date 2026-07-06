@@ -1,4 +1,4 @@
-import { CheckCircle2, Layers3, ShieldCheck, Sparkles } from 'lucide-react';
+import { CheckCircle2, Compass, ShieldCheck, Sparkles } from 'lucide-react';
 import type { PropsWithChildren, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 
@@ -27,10 +27,10 @@ export function AuthShell({
       <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-14">
         <Link className="inline-flex w-fit items-center gap-2.5" to="/">
           <span className="bg-foreground grid size-10 place-items-center rounded-xl text-white shadow-lg">
-            <Layers3 className="size-5" />
+            <Compass className="size-5" />
           </span>
           <span className="text-lg font-extrabold tracking-[-0.035em]">
-            Client<span className="text-primary">Flow</span>
+            Work<span className="text-primary">Navo</span>
           </span>
         </Link>
 
@@ -47,7 +47,7 @@ export function AuthShell({
         </div>
 
         <p className="text-muted text-xs">
-          © 2026 ClientFlow. Built for independent work.
+          © 2026 WorkNavo. Built for independent work.
         </p>
       </section>
 

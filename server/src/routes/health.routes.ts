@@ -17,7 +17,7 @@ healthRouter.get('/', (_request, response) => {
 
   const health: HealthResponse = {
     status: databaseStatus === 'connected' ? 'ok' : 'degraded',
-    service: 'clientflow-api',
+    service: 'worknavo-api',
     version: '0.1.0',
     timestamp: new Date().toISOString(),
     uptime: Math.round(process.uptime()),

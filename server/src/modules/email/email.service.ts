@@ -51,7 +51,7 @@ function fromAddress() {
 }
 
 function fromName() {
-  return env.SMTP_FROM_NAME || 'ClientFlow';
+  return env.SMTP_FROM_NAME || 'WorkNavo';
 }
 
 function formattedFromAddress(address: string) {
@@ -252,9 +252,9 @@ export async function sendPasswordResetEmail(input: {
 }) {
   await sendEmail({
     to: input.recipient,
-    subject: 'Reset your ClientFlow password',
-    text: `Hi ${input.recipientName},\n\nUse this temporary code to reset your ClientFlow password:\n${input.resetCode}\n\nThis code expires in ${input.expiresInMinutes} minutes. If you did not request it, you can ignore this email.`,
-    html: `<p>Hi ${input.recipientName},</p><p>Use this temporary code to reset your ClientFlow password:</p><p style="font-size:24px;font-weight:700;letter-spacing:6px">${input.resetCode}</p><p>This code expires in ${input.expiresInMinutes} minutes. If you did not request it, you can ignore this email.</p>`,
+    subject: 'Reset your WorkNavo password',
+    text: `Hi ${input.recipientName},\n\nUse this temporary code to reset your WorkNavo password:\n${input.resetCode}\n\nThis code expires in ${input.expiresInMinutes} minutes. If you did not request it, you can ignore this email.`,
+    html: `<p>Hi ${input.recipientName},</p><p>Use this temporary code to reset your WorkNavo password:</p><p style="font-size:24px;font-weight:700;letter-spacing:6px">${input.resetCode}</p><p>This code expires in ${input.expiresInMinutes} minutes. If you did not request it, you can ignore this email.</p>`,
   });
 }
 

@@ -364,7 +364,7 @@ export function AboutPage() {
   return (
     <MarketingShell>
       <PageHero
-        description="ClientFlow is built for freelancers and small service companies that need less admin mess between delivery and getting paid."
+        description="WorkNavo is built for freelancers and small service companies that need less admin mess between delivery and getting paid."
         eyebrow="About"
         title="A practical operating system for client work."
       />
@@ -400,9 +400,9 @@ export function TermsPage() {
           <div className="prose prose-slate max-w-none">
             <h2>Use of the service</h2>
             <p>
-              ClientFlow is provided for managing client work, team time,
-              reports, invoices, and related business records. Users are
-              responsible for the accuracy of data they enter.
+              WorkNavo is provided for managing client work, team time, reports,
+              invoices, and related business records. Users are responsible for
+              the accuracy of data they enter.
             </p>
             <h2>Accounts and access</h2>
             <p>

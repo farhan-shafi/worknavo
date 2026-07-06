@@ -3,7 +3,7 @@ export type DatabaseStatus = 'connected' | 'connecting' | 'disconnected';
 
 export interface HealthResponse {
   status: ApiStatus;
-  service: 'clientflow-api';
+  service: 'worknavo-api';
   version: string;
   timestamp: string;
   uptime: number;

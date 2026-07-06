@@ -41,7 +41,7 @@ function emailShell(content: string, organization: OrganizationDocument) {
         <div style="padding:30px 28px;line-height:1.65">${content}</div>
       </div>
       <p style="color:#667581;font-size:12px;text-align:center;margin:18px 0 0">
-        Sent with ClientFlow
+        Sent with WorkNavo
       </p>
     </div>
   </body>
@@ -187,7 +187,7 @@ export function scheduledSummaryEmailTemplate({
         )
       : ['- No project time was logged.']),
     '',
-    `Sent by ${senderName(organization)} via ClientFlow.`,
+    `Sent by ${senderName(organization)} via WorkNavo.`,
   ].join('\n');
   const html = emailShell(
     `<p style="margin-top:0;color:#667581">Scheduled summary for <strong>${escapeHtml(periodLabel)}</strong>.</p>

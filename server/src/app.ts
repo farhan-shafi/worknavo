@@ -50,7 +50,7 @@ app.use(cookieParser());
 
 app.get('/api', (_request, response) => {
   response.json({
-    name: 'ClientFlow API',
+    name: 'WorkNavo API',
     version: '0.1.0',
     health: '/api/health',
   });

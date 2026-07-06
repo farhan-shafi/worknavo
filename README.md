@@ -1,18 +1,15 @@
-# ClientFlow
+# WorkNavo
 
-> ClientFlow is the current working title. The product will be renamed after a
-> replacement domain is selected.
-
-ClientFlow is a multi-tenant client operations platform for solo freelancers
+WorkNavo is a multi-tenant client operations platform for solo freelancers
 and companies. It connects team access, project assignments, time tracking,
 weekly reports, invoices, analytics, PDF exports, and email delivery.
 
 For a step-by-step local setup guide, see [docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md).
 
-![ClientFlow dashboard](docs/screenshots/dashboard.png)
+![WorkNavo dashboard](docs/screenshots/dashboard.png)
 
 <p align="center">
-  <img src="docs/screenshots/mobile-dashboard.png" alt="ClientFlow mobile navigation" width="320" />
+  <img src="docs/screenshots/mobile-dashboard.png" alt="WorkNavo mobile navigation" width="320" />
 </p>
 
 ## What the application does
@@ -245,7 +242,7 @@ total = taxable amount + tax
 ```
 
 The database field remains named `quantity` for compatibility, but the product
-labels it as **Hours** because ClientFlow invoices time-based service work.
+labels it as **Hours** because WorkNavo invoices time-based service work.
 
 New invoice numbers use the organization's prefix, for example `NS-0001`.
 
@@ -261,7 +258,7 @@ PDFs include:
 - Report or invoice metadata
 - Hour, rate, amount, and total breakdowns
 - Notes, summaries, highlights, and statuses
-- Page numbers and ClientFlow footer
+- Page numbers and WorkNavo footer
 
 Routes:
 
@@ -298,7 +295,7 @@ Create `server/.env`:
 ```env
 PORT=5050
 NODE_ENV=development
-MONGO_URI=mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/clientflow?retryWrites=true&w=majority
+MONGO_URI=mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/worknavo?retryWrites=true&w=majority
 JWT_ACCESS_SECRET=replace-with-at-least-32-random-characters
 JWT_REFRESH_SECRET=replace-with-a-different-32-character-secret
 CLIENT_URL=http://localhost:5173
@@ -402,7 +399,7 @@ npm run seed:demo
 Login:
 
 ```text
-Email: demo@clientflow.local
+Email: demo@worknavo.local
 Password: DemoPass123
 ```
 

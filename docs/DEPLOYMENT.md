@@ -1,6 +1,6 @@
-# ClientFlow deployment guide
+# WorkNavo deployment guide
 
-ClientFlow can remain local-only, but this setup is ready when you want a
+WorkNavo can remain local-only, but this setup is ready when you want a
 public portfolio deployment.
 
 ## Recommended services
@@ -26,7 +26,7 @@ PORT=5050
 MONGO_URI=mongodb+srv://...
 JWT_ACCESS_SECRET=use-a-random-secret-at-least-32-characters-long
 JWT_REFRESH_SECRET=use-a-different-random-secret-at-least-32-characters
-CLIENT_URL=https://your-clientflow-frontend.example
+CLIENT_URL=https://your-worknavo-frontend.example
 RESEND_API_KEY=re_...
 SMTP_HOST=
 SMTP_PORT=587
@@ -34,11 +34,11 @@ SMTP_SECURE=false
 SMTP_USER=
 SMTP_PASS=
 SMTP_FROM=noreply@your-verified-domain.example
-SMTP_FROM_NAME=ClientFlow
+SMTP_FROM_NAME=WorkNavo
 ```
 
 The hosting provider normally supplies `PORT`; keep its provided value.
-When `RESEND_API_KEY` is set, ClientFlow sends email through the Resend API and
+When `RESEND_API_KEY` is set, WorkNavo sends email through the Resend API and
 does not need `SMTP_HOST`, `SMTP_USER`, or `SMTP_PASS`.
 
 ## Deploy the frontend
@@ -51,7 +51,7 @@ does not need `SMTP_HOST`, `SMTP_USER`, or `SMTP_PASS`.
 6. Set:
 
 ```env
-VITE_API_URL=https://your-clientflow-api.example/api
+VITE_API_URL=https://your-worknavo-api.example/api
 ```
 
 ## Production checklist

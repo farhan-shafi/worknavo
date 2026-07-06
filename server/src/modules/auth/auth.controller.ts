@@ -33,8 +33,8 @@ import { sessionWorkspace } from '../organizations/organization.service.js';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 
-const ACCESS_COOKIE = 'clientflow_access';
-const REFRESH_COOKIE = 'clientflow_refresh';
+const ACCESS_COOKIE = 'worknavo_access';
+const REFRESH_COOKIE = 'worknavo_refresh';
 
 function cookieOptions(maxAge: number): CookieOptions {
   return {
@@ -84,7 +84,7 @@ export async function register(request: Request, response: Response) {
   );
 
   const body: AuthResponse = {
-    message: 'Your ClientFlow workspace is ready.',
+    message: 'Your WorkNavo workspace is ready.',
     user: publicUser,
   };
 

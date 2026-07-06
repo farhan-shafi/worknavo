@@ -137,7 +137,7 @@ export function RegisterPage() {
             {...form.register('acceptTerms')}
           />
           <span className="text-muted">
-            I agree to the terms and understand this is my private ClientFlow
+            I agree to the terms and understand this is my private WorkNavo
             workspace.
           </span>
         </label>

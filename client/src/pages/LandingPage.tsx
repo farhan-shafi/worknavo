@@ -5,6 +5,7 @@ import {
   Check,
   CircleDollarSign,
   Clock3,
+  Compass,
   FileText,
   Layers3,
   ShieldCheck,
@@ -98,10 +99,10 @@ export function Brand() {
   return (
     <Link className="inline-flex items-center gap-2.5" to="/">
       <span className="bg-foreground shadow-foreground/15 grid size-10 place-items-center rounded-xl text-white shadow-lg">
-        <Layers3 className="size-5" />
+        <Compass className="size-5" />
       </span>
       <span className="text-lg font-extrabold tracking-[-0.035em]">
-        Client<span className="text-primary">Flow</span>
+        Work<span className="text-primary">Navo</span>
       </span>
     </Link>
   );
@@ -311,7 +312,7 @@ export function LandingPage() {
               Run client work from timer to paid invoice.
             </h1>
             <p className="text-muted mx-auto mt-8 max-w-2xl text-base leading-7 text-balance sm:text-lg">
-              ClientFlow helps freelancers and small service teams track work,
+              WorkNavo helps freelancers and small service teams track work,
               control role visibility, review project activity, generate
               reports, and invoice without rebuilding the same data twice.
             </p>

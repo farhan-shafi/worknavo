@@ -12,8 +12,8 @@ import {
   ChevronDown,
   CircleDollarSign,
   Clock3,
+  Compass,
   FileText,
-  Layers3,
   LayoutDashboard,
   LogOut,
   Menu,
@@ -150,10 +150,10 @@ function WorkspaceMark() {
   return (
     <div className="inline-flex items-center gap-2.5">
       <span className="bg-foreground grid size-10 place-items-center rounded-xl text-white shadow-md shadow-slate-900/10">
-        <Layers3 className="size-5" />
+        <Compass className="size-5" />
       </span>
       <span className="text-lg font-extrabold tracking-[-0.035em]">
-        Client<span className="text-primary">Flow</span>
+        Work<span className="text-primary">Navo</span>
       </span>
     </div>
   );
@@ -303,10 +303,10 @@ export function AppLayout() {
         <ConfirmDialog
           confirmLabel="Log out"
           danger
-          description="You will need to sign in again to return to your ClientFlow workspace."
+          description="You will need to sign in again to return to your WorkNavo workspace."
           onConfirm={() => logout.mutate()}
           pending={logout.isPending}
-          title="Log out of ClientFlow?"
+          title="Log out of WorkNavo?"
           trigger={
             <button
               className="hover:bg-danger/5 hover:text-danger mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-bold transition"
@@ -465,7 +465,7 @@ export function AppLayout() {
                   type="button"
                 >
                   <Avatar
-                    name={auth.user?.name ?? 'ClientFlow'}
+                    name={auth.user?.name ?? 'WorkNavo'}
                     size="sm"
                     src={auth.user?.avatarUrl}
                   />

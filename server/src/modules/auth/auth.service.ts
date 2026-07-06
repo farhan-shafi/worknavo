@@ -51,8 +51,8 @@ function signToken(
 
   return jwt.sign({ type, ...extraPayload, organizationId }, secret, {
     subject: userId,
-    issuer: 'clientflow-api',
-    audience: 'clientflow-web',
+    issuer: 'worknavo-api',
+    audience: 'worknavo-web',
     expiresIn,
   });
 }
@@ -61,8 +61,8 @@ function verifyToken(token: string, type: TokenPayload['type']) {
   const secret =
     type === 'access' ? env.JWT_ACCESS_SECRET : env.JWT_REFRESH_SECRET;
   const payload = jwt.verify(token, secret, {
-    issuer: 'clientflow-api',
-    audience: 'clientflow-web',
+    issuer: 'worknavo-api',
+    audience: 'worknavo-web',
   });
 
   if (

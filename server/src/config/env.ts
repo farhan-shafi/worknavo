@@ -23,7 +23,7 @@ const environmentSchema = z.object({
     .string()
     .min(32)
     .default('development-refresh-secret-change-me-now'),
-  MONGO_URI: z.string().min(1).default('mongodb://127.0.0.1:27017/clientflow'),
+  MONGO_URI: z.string().min(1).default('mongodb://127.0.0.1:27017/worknavo'),
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
     .default('development'),
@@ -31,7 +31,7 @@ const environmentSchema = z.object({
   RESEND_API_KEY: optionalEnvironmentString,
   SCHEDULE_RUNNER_SECRET: optionalEnvironmentString,
   SMTP_FROM: optionalEnvironmentString,
-  SMTP_FROM_NAME: optionalEnvironmentString.default('ClientFlow'),
+  SMTP_FROM_NAME: optionalEnvironmentString.default('WorkNavo'),
   SMTP_HOST: optionalEnvironmentString,
   SMTP_PASS: optionalEnvironmentString,
   SMTP_PORT: z.coerce.number().int().positive().default(587),

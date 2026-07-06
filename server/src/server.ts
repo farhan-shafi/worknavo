@@ -11,13 +11,13 @@ async function startServer() {
 
   server.listen(env.PORT, () => {
     console.info(
-      `ClientFlow API listening on http://localhost:${env.PORT} (${env.NODE_ENV})`,
+      `WorkNavo API listening on http://localhost:${env.PORT} (${env.NODE_ENV})`,
     );
   });
 }
 
 async function shutdown(signal: string) {
-  console.info(`${signal} received. Closing ClientFlow gracefully.`);
+  console.info(`${signal} received. Closing WorkNavo gracefully.`);
 
   server.close(async () => {
     await disconnectDatabase();
@@ -31,6 +31,6 @@ process.on('SIGINT', () => void shutdown('SIGINT'));
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
 
 startServer().catch((error) => {
-  console.error('ClientFlow failed to start.', error);
+  console.error('WorkNavo failed to start.', error);
   process.exit(1);
 });

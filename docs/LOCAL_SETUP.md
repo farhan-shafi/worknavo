@@ -1,6 +1,6 @@
-# ClientFlow local setup
+# WorkNavo local setup
 
-Use this guide if you want to run ClientFlow locally and push the code to your
+Use this guide if you want to run WorkNavo locally and push the code to your
 own GitHub repository.
 
 ## 1. Install prerequisites
@@ -58,7 +58,7 @@ SMTP_SECURE=false
 SMTP_USER=
 SMTP_PASS=
 SMTP_FROM=
-SMTP_FROM_NAME=ClientFlow
+SMTP_FROM_NAME=WorkNavo
 ```
 
 If you want email delivery to work locally, either add `RESEND_API_KEY` plus
@@ -102,7 +102,7 @@ npm run seed:demo
 Demo login:
 
 ```text
-Email: demo@clientflow.local
+Email: demo@worknavo.local
 Password: DemoPass123
 ```
 
@@ -125,7 +125,7 @@ If you created your own repo on GitHub, connect this local project to it:
 git remote add origin https://github.com/farhan-shafi/clientflow.git
 git branch -M main
 git add .
-git commit -m "Initial ClientFlow implementation"
+git commit -m "Initial WorkNavo implementation"
 git push -u origin main
 ```
 

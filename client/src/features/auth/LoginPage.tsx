@@ -52,7 +52,7 @@ export function LoginPage() {
       eyebrow="Welcome back"
       footer={
         <>
-          New to ClientFlow?{' '}
+          New to WorkNavo?{' '}
           <Link
             className="text-primary font-bold hover:underline"
             to="/register"

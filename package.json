@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "ClientFlow — client reporting and invoicing for freelancers and agencies.",
+  "description": "WorkNavo — client reporting and invoicing for freelancers and agencies.",
   "workspaces": [
     "client",
     "server",
