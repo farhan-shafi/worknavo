@@ -73,6 +73,11 @@ export interface Organization {
   timezone: string;
   weekStartsOn: number;
   defaultWeeklyCapacity: number;
+  workLogRequireCategory: boolean;
+  workLogRequireDescription: boolean;
+  workLogMinimumDescriptionLength: number;
+  workLogLockAfterDays: number | null;
+  invoiceTimeRoundingMinutes: 0 | 5 | 10 | 15 | 30;
   status: 'active' | 'archived';
   createdAt: string;
   updatedAt: string;

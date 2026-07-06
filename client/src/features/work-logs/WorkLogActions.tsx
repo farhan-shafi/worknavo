@@ -1,5 +1,5 @@
 import type { WorkLog } from '@clientflow/shared';
-import { MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
+import { Copy, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { Button } from '../../components/ui/button';
 import {
@@ -13,10 +13,12 @@ import {
 
 export function WorkLogActions({
   onDelete,
+  onDuplicate,
   onEdit,
   workLog,
 }: {
   onDelete: () => void;
+  onDuplicate?: () => void;
   onEdit: () => void;
   workLog: WorkLog;
 }) {
@@ -39,6 +41,11 @@ export function WorkLogActions({
             <DropdownMenuLabel>Linked to an invoice</DropdownMenuLabel>
             <DropdownMenuSeparator />
           </>
+        ) : null}
+        {onDuplicate ? (
+          <DropdownMenuItem onSelect={onDuplicate}>
+            <Copy className="size-4" /> Duplicate entry
+          </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem disabled={lockedByInvoice} onSelect={onEdit}>
           <Pencil className="size-4" /> Edit work log

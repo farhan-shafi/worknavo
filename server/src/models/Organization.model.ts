@@ -19,6 +19,11 @@ export interface Organization {
   timezone: string;
   weekStartsOn: number;
   defaultWeeklyCapacity: number;
+  workLogRequireCategory: boolean;
+  workLogRequireDescription: boolean;
+  workLogMinimumDescriptionLength: number;
+  workLogLockAfterDays?: number;
+  invoiceTimeRoundingMinutes: 0 | 5 | 10 | 15 | 30;
   status: 'active' | 'archived';
   createdAt: Date;
   updatedAt: Date;
@@ -70,6 +75,24 @@ const organizationSchema = new Schema<Organization>(
     timezone: { type: String, trim: true, default: 'UTC', maxlength: 100 },
     weekStartsOn: { type: Number, min: 0, max: 6, default: 1 },
     defaultWeeklyCapacity: { type: Number, min: 1, max: 168, default: 40 },
+    workLogRequireCategory: { type: Boolean, default: false },
+    workLogRequireDescription: { type: Boolean, default: false },
+    workLogMinimumDescriptionLength: {
+      type: Number,
+      min: 0,
+      max: 500,
+      default: 0,
+    },
+    workLogLockAfterDays: {
+      type: Number,
+      min: 1,
+      max: 3650,
+    },
+    invoiceTimeRoundingMinutes: {
+      type: Number,
+      enum: [0, 5, 10, 15, 30],
+      default: 0,
+    },
     status: {
       type: String,
       enum: ['active', 'archived'],
@@ -104,6 +127,12 @@ export function toOrganizationContract(
     timezone: organization.timezone,
     weekStartsOn: organization.weekStartsOn,
     defaultWeeklyCapacity: organization.defaultWeeklyCapacity,
+    workLogRequireCategory: organization.workLogRequireCategory ?? false,
+    workLogRequireDescription: organization.workLogRequireDescription ?? false,
+    workLogMinimumDescriptionLength:
+      organization.workLogMinimumDescriptionLength ?? 0,
+    workLogLockAfterDays: organization.workLogLockAfterDays ?? null,
+    invoiceTimeRoundingMinutes: organization.invoiceTimeRoundingMinutes ?? 0,
     status: organization.status,
     createdAt: organization.createdAt.toISOString(),
     updatedAt: organization.updatedAt.toISOString(),

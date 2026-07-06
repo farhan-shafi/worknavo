@@ -23,6 +23,31 @@ export const settingsSchema = z.object({
     .max(12)
     .regex(/^[A-Za-z0-9-]+$/, 'Use only letters, numbers, and hyphens.'),
   defaultInvoiceNotes: z.string().trim().max(2000),
+  workLogRequireCategory: z.enum(['true', 'false']),
+  workLogRequireDescription: z.enum(['true', 'false']),
+  workLogMinimumDescriptionLength: z
+    .string()
+    .trim()
+    .refine(
+      (value) =>
+        value === '' ||
+        (Number.isInteger(Number(value)) &&
+          Number(value) >= 0 &&
+          Number(value) <= 500),
+      'Enter a number from 0 to 500.',
+    ),
+  workLogLockAfterDays: z
+    .string()
+    .trim()
+    .refine(
+      (value) =>
+        value === '' ||
+        (Number.isInteger(Number(value)) &&
+          Number(value) >= 1 &&
+          Number(value) <= 3650),
+      'Enter a number from 1 to 3650, or leave blank.',
+    ),
+  invoiceTimeRoundingMinutes: z.enum(['0', '5', '10', '15', '30']),
 });
 
 export type SettingsFormValues = z.infer<typeof settingsSchema>;

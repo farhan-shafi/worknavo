@@ -4,6 +4,7 @@ import {
   Building2,
   CircleDollarSign,
   FileText,
+  ListChecks,
   LoaderCircle,
   Save,
   UserRound,
@@ -44,6 +45,25 @@ export function SettingsPage() {
         organization?.invoicePrefix ?? user?.invoicePrefix ?? 'INV',
       defaultInvoiceNotes:
         organization?.defaultInvoiceNotes ?? user?.defaultInvoiceNotes ?? '',
+      workLogRequireCategory: organization?.workLogRequireCategory
+        ? 'true'
+        : 'false',
+      workLogRequireDescription: organization?.workLogRequireDescription
+        ? 'true'
+        : 'false',
+      workLogMinimumDescriptionLength:
+        organization?.workLogMinimumDescriptionLength === undefined ||
+        organization.workLogMinimumDescriptionLength === 0
+          ? ''
+          : String(organization.workLogMinimumDescriptionLength),
+      workLogLockAfterDays:
+        organization?.workLogLockAfterDays === null ||
+        organization?.workLogLockAfterDays === undefined
+          ? ''
+          : String(organization.workLogLockAfterDays),
+      invoiceTimeRoundingMinutes: String(
+        organization?.invoiceTimeRoundingMinutes ?? 0,
+      ) as SettingsFormValues['invoiceTimeRoundingMinutes'],
     },
   });
   const saveSettings = useMutation({
@@ -78,6 +98,20 @@ export function SettingsPage() {
                   : Number(values.defaultHourlyRate),
               invoicePrefix: values.invoicePrefix.trim().toUpperCase(),
               defaultInvoiceNotes: values.defaultInvoiceNotes.trim() || null,
+              workLogRequireCategory: values.workLogRequireCategory === 'true',
+              workLogRequireDescription:
+                values.workLogRequireDescription === 'true',
+              workLogMinimumDescriptionLength:
+                values.workLogMinimumDescriptionLength === ''
+                  ? 0
+                  : Number(values.workLogMinimumDescriptionLength),
+              workLogLockAfterDays:
+                values.workLogLockAfterDays === ''
+                  ? null
+                  : Number(values.workLogLockAfterDays),
+              invoiceTimeRoundingMinutes: Number(
+                values.invoiceTimeRoundingMinutes,
+              ),
             }),
           })
         : null;
@@ -207,6 +241,91 @@ export function SettingsPage() {
                 type="number"
                 {...form.register('defaultHourlyRate')}
               />
+            </FormControl>
+          </div>
+        </SettingsCard>
+
+        <SettingsCard
+          description="Set Clockify-style rules that keep team time entries clean before reports and invoices are generated."
+          icon={<ListChecks className="size-5" />}
+          title="Work log rules"
+        >
+          <div className="grid gap-5 sm:grid-cols-2">
+            <FormControl
+              error={fieldError('workLogRequireCategory')}
+              label="Require category"
+            >
+              <Select
+                disabled={!permissions.includes('settings.manage')}
+                {...form.register('workLogRequireCategory')}
+              >
+                <option value="false">No — category is optional</option>
+                <option value="true">Yes — category is required</option>
+              </Select>
+            </FormControl>
+            <FormControl
+              error={fieldError('workLogRequireDescription')}
+              label="Require notes"
+            >
+              <Select
+                disabled={!permissions.includes('settings.manage')}
+                {...form.register('workLogRequireDescription')}
+              >
+                <option value="false">No — notes are optional</option>
+                <option value="true">Yes — notes are required</option>
+              </Select>
+            </FormControl>
+            <FormControl
+              error={fieldError('workLogMinimumDescriptionLength')}
+              label="Minimum notes length"
+            >
+              <Input
+                disabled={!permissions.includes('settings.manage')}
+                inputMode="numeric"
+                min="0"
+                placeholder="0"
+                step="1"
+                type="number"
+                {...form.register('workLogMinimumDescriptionLength')}
+              />
+              <p className="text-muted mt-2 text-xs">
+                Leave blank or use 0 to disable a minimum length.
+              </p>
+            </FormControl>
+            <FormControl
+              error={fieldError('workLogLockAfterDays')}
+              label="Lock member edits after"
+            >
+              <Input
+                disabled={!permissions.includes('settings.manage')}
+                inputMode="numeric"
+                min="1"
+                placeholder="Blank = never lock"
+                step="1"
+                type="number"
+                {...form.register('workLogLockAfterDays')}
+              />
+              <p className="text-muted mt-2 text-xs">
+                Owners/admins can still correct locked entries.
+              </p>
+            </FormControl>
+            <FormControl
+              error={fieldError('invoiceTimeRoundingMinutes')}
+              label="Invoice time rounding"
+            >
+              <Select
+                disabled={!permissions.includes('settings.manage')}
+                {...form.register('invoiceTimeRoundingMinutes')}
+              >
+                <option value="0">No rounding</option>
+                <option value="5">Nearest 5 minutes</option>
+                <option value="10">Nearest 10 minutes</option>
+                <option value="15">Nearest 15 minutes</option>
+                <option value="30">Nearest 30 minutes</option>
+              </Select>
+              <p className="text-muted mt-2 text-xs">
+                Applies when generating invoices from work logs.
+              </p>
             </FormControl>
           </div>
         </SettingsCard>

@@ -18,4 +18,21 @@ export const updateOrganizationSchema = z.object({
   timezone: z.string().trim().min(1).max(100).optional(),
   weekStartsOn: z.coerce.number().int().min(0).max(6).optional(),
   defaultWeeklyCapacity: z.coerce.number().min(1).max(168).optional(),
+  workLogRequireCategory: z.boolean().optional(),
+  workLogRequireDescription: z.boolean().optional(),
+  workLogMinimumDescriptionLength: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(500)
+    .optional(),
+  workLogLockAfterDays: z.coerce.number().int().min(1).max(3650).nullish(),
+  invoiceTimeRoundingMinutes: z.coerce
+    .number()
+    .int()
+    .refine(
+      (value) => [0, 5, 10, 15, 30].includes(value),
+      'Select a supported invoice rounding rule.',
+    )
+    .optional(),
 });

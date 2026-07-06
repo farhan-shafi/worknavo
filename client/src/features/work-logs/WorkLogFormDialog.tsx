@@ -22,6 +22,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { ApiError, request } from '../../lib/api-client';
 import { clientQueryKeys, useClients } from '../clients/client.queries';
 import { useProjects } from '../projects/project.queries';
+import { useAuth } from '../auth/use-auth';
 import { workLogApi } from './work-log.api';
 import { workLogQueryKeys } from './work-log.queries';
 import { workLogFormSchema, type WorkLogFormValues } from './work-log.schemas';
@@ -31,6 +32,7 @@ interface WorkLogFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workLog?: WorkLog | null;
+  templateWorkLog?: WorkLog | null;
   defaultClientId?: string;
   defaultProjectId?: string;
 }
@@ -39,6 +41,7 @@ function valuesFromWorkLog(
   workLog: WorkLog | null | undefined,
   defaultClientId: string | undefined,
   defaultProjectId: string | undefined,
+  duplicateForToday = false,
 ): WorkLogFormValues {
   if (!workLog) {
     return {
@@ -61,7 +64,9 @@ function valuesFromWorkLog(
     description: workLog.description ?? '',
     categoryId: workLog.categoryId ?? '',
     tags: workLog.tags.join(', '),
-    workDate: dateInputValue(workLog.workDate),
+    workDate: duplicateForToday
+      ? format(new Date(), 'yyyy-MM-dd')
+      : dateInputValue(workLog.workDate),
     durationHours: String(workLog.durationHours),
     billable: workLog.billable ? 'true' : 'false',
   };
@@ -72,16 +77,19 @@ export function WorkLogFormDialog({
   defaultProjectId,
   onOpenChange,
   open,
+  templateWorkLog,
   workLog,
 }: WorkLogFormDialogProps) {
+  const { organization } = useAuth();
   const queryClient = useQueryClient();
   const clientsQuery = useClients({ search: '', status: 'all' });
   const form = useForm<WorkLogFormValues>({
     resolver: zodResolver(workLogFormSchema),
     defaultValues: valuesFromWorkLog(
-      workLog,
+      workLog ?? templateWorkLog,
       defaultClientId,
       defaultProjectId,
+      !workLog && Boolean(templateWorkLog),
     ),
   });
   const selectedClientId = form.watch('clientId');
@@ -135,15 +143,27 @@ export function WorkLogFormDialog({
 
   useEffect(() => {
     if (open) {
-      form.reset(valuesFromWorkLog(workLog, defaultClientId, defaultProjectId));
+      form.reset(
+        valuesFromWorkLog(
+          workLog ?? templateWorkLog,
+          defaultClientId,
+          defaultProjectId,
+          !workLog && Boolean(templateWorkLog),
+        ),
+      );
     }
-  }, [defaultClientId, defaultProjectId, form, open, workLog]);
+  }, [defaultClientId, defaultProjectId, form, open, templateWorkLog, workLog]);
 
   const projects = useMemo(
     () => projectsQuery.data?.projects ?? [],
     [projectsQuery.data?.projects],
   );
   const clients = clientsQuery.data?.clients ?? [];
+  const categoryRequired = organization?.workLogRequireCategory ?? false;
+  const minimumNotesLength = Math.max(
+    organization?.workLogRequireDescription ? 1 : 0,
+    organization?.workLogMinimumDescriptionLength ?? 0,
+  );
 
   useEffect(() => {
     if (!selectedProjectId) {
@@ -163,7 +183,11 @@ export function WorkLogFormDialog({
       <DialogContent className="max-h-[92vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
-            {workLog ? 'Edit work log' : 'Create a work log'}
+            {workLog
+              ? 'Edit work log'
+              : templateWorkLog
+                ? 'Duplicate work log'
+                : 'Create a work log'}
           </DialogTitle>
           <DialogDescription>
             Capture the work, date, hours, and billing status for a specific
@@ -211,7 +235,11 @@ export function WorkLogFormDialog({
                 {...form.register('title')}
               />
             </FormControl>
-            <FormControl error={fieldError('categoryId')} label="Category">
+            <FormControl
+              error={fieldError('categoryId')}
+              label="Category"
+              required={categoryRequired}
+            >
               <Select {...form.register('categoryId')}>
                 <option value="">No category</option>
                 {categoriesQuery.data?.categories
@@ -264,11 +292,21 @@ export function WorkLogFormDialog({
               {...form.register('tags')}
             />
           </FormControl>
-          <FormControl error={fieldError('description')} label="Notes">
+          <FormControl
+            error={fieldError('description')}
+            label="Notes"
+            required={minimumNotesLength > 0}
+          >
             <Textarea
               placeholder="Describe what you completed, decisions made, or blockers handled…"
               {...form.register('description')}
             />
+            {minimumNotesLength > 1 ? (
+              <p className="text-muted mt-2 text-xs">
+                Workspace policy requires at least {minimumNotesLength}{' '}
+                characters.
+              </p>
+            ) : null}
           </FormControl>
 
           <DialogFooter>

@@ -101,6 +101,18 @@ function normalizedItems(
   }));
 }
 
+function roundedInvoiceHours(hours: number, roundingMinutes: number) {
+  if (!roundingMinutes) {
+    return hours;
+  }
+
+  const roundedMinutes =
+    Math.round((hours * 60) / roundingMinutes) * roundingMinutes;
+  const safeMinutes = hours > 0 ? Math.max(roundingMinutes, roundedMinutes) : 0;
+
+  return roundMoney(safeMinutes / 60);
+}
+
 function workLogIdsFromItems(items: InvoiceItem[]) {
   return [
     ...new Set(
@@ -333,10 +345,13 @@ async function payloadForManualInvoice(
   };
 }
 
-function generatedItemForWorkLog(workLog: WorkLogDocument) {
+function generatedItemForWorkLog(
+  workLog: WorkLogDocument,
+  roundingMinutes: number,
+) {
   return {
     description: `${workLog.title} (${workLog.workDate.toLocaleDateString()})`,
-    quantity: workLog.durationHours,
+    quantity: roundedInvoiceHours(workLog.durationHours, roundingMinutes),
     rate: workLog.hourlyRate,
     workLogId: workLog._id.toString(),
   };
@@ -470,7 +485,14 @@ export async function generateInvoiceFromWorkLogs(
     );
   }
 
-  const items = normalizedItems(workLogs.map(generatedItemForWorkLog));
+  const items = normalizedItems(
+    workLogs.map((workLog) =>
+      generatedItemForWorkLog(
+        workLog,
+        actor.organization.invoiceTimeRoundingMinutes ?? 0,
+      ),
+    ),
+  );
   const totals = calculateTotals(items, input.discount, input.taxRate);
   const invoice = await InvoiceModel.create({
     userId: actor.user._id,

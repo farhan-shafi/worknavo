@@ -365,6 +365,62 @@ function timerDurationHours(startedAt: Date, stoppedAt: Date) {
   return Math.max(0.01, Number(rawHours.toFixed(2)));
 }
 
+function workLogPolicyMinimumDescriptionLength(actor: WorkspaceActor) {
+  return Math.max(
+    actor.organization.workLogRequireDescription ? 1 : 0,
+    actor.organization.workLogMinimumDescriptionLength ?? 0,
+  );
+}
+
+function assertWorkLogPolicy(
+  actor: WorkspaceActor,
+  input: {
+    categoryId?: string | null;
+    description?: string | null;
+  },
+) {
+  if (actor.organization.workLogRequireCategory && !input.categoryId) {
+    throw new ApiError(422, 'Select a work category for this entry.');
+  }
+
+  const minimumDescriptionLength = workLogPolicyMinimumDescriptionLength(actor);
+  const description = input.description?.trim() ?? '';
+
+  if (
+    minimumDescriptionLength > 0 &&
+    description.length < minimumDescriptionLength
+  ) {
+    throw new ApiError(
+      422,
+      minimumDescriptionLength === 1
+        ? 'Add notes for this work entry.'
+        : `Add notes with at least ${minimumDescriptionLength} characters.`,
+    );
+  }
+}
+
+function assertWorkLogEditWindow(
+  actor: WorkspaceActor,
+  workLog: WorkLogDocument,
+) {
+  const lockAfterDays = actor.organization.workLogLockAfterDays;
+
+  if (!lockAfterDays || actorHas(actor, 'worklogs.manageAll')) {
+    return;
+  }
+
+  const lockBefore = new Date();
+  lockBefore.setHours(0, 0, 0, 0);
+  lockBefore.setDate(lockBefore.getDate() - lockAfterDays);
+
+  if (workLog.workDate.getTime() < lockBefore.getTime()) {
+    throw new ApiError(
+      409,
+      `Workspace policy locks work logs older than ${lockAfterDays} day${lockAfterDays === 1 ? '' : 's'}.`,
+    );
+  }
+}
+
 export async function listWorkLogs(
   actor: WorkspaceActor,
   filters: {
@@ -434,6 +490,10 @@ export async function createWorkLog(
     input.projectId,
     input.categoryId,
   );
+  assertWorkLogPolicy(actor, {
+    categoryId: category?._id.toString() ?? null,
+    description: input.description,
+  });
   const workLog = await WorkLogModel.create({
     ...input,
     tags: input.tags ?? [],
@@ -478,6 +538,10 @@ export async function startWorkLogTimer(
     input.projectId,
     input.categoryId,
   );
+  assertWorkLogPolicy(actor, {
+    categoryId: category?._id.toString() ?? null,
+    description: input.description,
+  });
   const startedAt = new Date();
   const workLog = await WorkLogModel.create({
     ...input,
@@ -601,6 +665,7 @@ export async function updateWorkLog(
       'This work log is locked by a final report or invoice.',
     );
   }
+  assertWorkLogEditWindow(actor, currentWorkLog);
 
   const { category, client, project } = await requireWorkLogRelations(
     actor,
@@ -608,6 +673,10 @@ export async function updateWorkLog(
     input.projectId ?? currentWorkLog.projectId.toString(),
     input.categoryId ?? currentWorkLog.categoryId?.toString(),
   );
+  assertWorkLogPolicy(actor, {
+    categoryId: category?._id.toString() ?? null,
+    description: input.description ?? currentWorkLog.description,
+  });
   const setFields: Record<string, unknown> = {
     clientId: client._id,
     projectId: project._id,
@@ -688,6 +757,7 @@ export async function deleteWorkLog(actor: WorkspaceActor, workLogId: string) {
       'This work log is linked to an invoice and cannot be deleted.',
     );
   }
+  assertWorkLogEditWindow(actor, existingWorkLog);
 
   const ownsLog = sameObjectId(
     existingWorkLog.membershipId,

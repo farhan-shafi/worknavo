@@ -15,6 +15,7 @@ import { Select } from '../../components/ui/select';
 import { ApiError, request } from '../../lib/api-client';
 import { clientQueryKeys, useClients } from '../clients/client.queries';
 import { useProjects } from '../projects/project.queries';
+import { useAuth } from '../auth/use-auth';
 import { workLogApi } from './work-log.api';
 import { workLogQueryKeys } from './work-log.queries';
 import {
@@ -44,6 +45,7 @@ export function WorkLogTimerPanel({
   activeTimer,
   defaultClientId,
 }: WorkLogTimerPanelProps) {
+  const { organization } = useAuth();
   const queryClient = useQueryClient();
   const clientsQuery = useClients({ search: '', status: 'all' });
   const form = useForm<WorkLogTimerValues>({
@@ -118,6 +120,11 @@ export function WorkLogTimerPanel({
     [projectsQuery.data?.projects],
   );
   const clients = clientsQuery.data?.clients ?? [];
+  const categoryRequired = organization?.workLogRequireCategory ?? false;
+  const minimumNotesLength = Math.max(
+    organization?.workLogRequireDescription ? 1 : 0,
+    organization?.workLogMinimumDescriptionLength ?? 0,
+  );
 
   useEffect(() => {
     if (!selectedProjectId) {
@@ -196,6 +203,7 @@ export function WorkLogTimerPanel({
         <FormControl
           error={form.formState.errors.categoryId?.message}
           label="Category"
+          required={categoryRequired}
         >
           <Select {...form.register('categoryId')}>
             <option value="">No category</option>
@@ -207,6 +215,20 @@ export function WorkLogTimerPanel({
                 </option>
               ))}
           </Select>
+        </FormControl>
+        <FormControl
+          error={form.formState.errors.description?.message}
+          label="Notes"
+          required={minimumNotesLength > 0}
+        >
+          <Input
+            placeholder={
+              minimumNotesLength > 1
+                ? `Required, ${minimumNotesLength}+ characters`
+                : 'Optional notes'
+            }
+            {...form.register('description')}
+          />
         </FormControl>
         <FormControl
           error={form.formState.errors.billable?.message}
@@ -322,14 +344,19 @@ function FormControl({
   children,
   error,
   label,
+  required = false,
 }: {
   children: ReactNode;
   error?: string;
   label: string;
+  required?: boolean;
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-bold">{label}</span>
+      <span className="mb-2 block text-sm font-bold">
+        {label}
+        {required ? <span className="text-primary ml-1">*</span> : null}
+      </span>
       {children}
       {error ? (
         <span className="text-danger mt-1.5 block text-xs font-semibold">

@@ -3,6 +3,7 @@ import {
   BriefcaseBusiness,
   CalendarDays,
   Clock3,
+  Copy,
   Plus,
   Search,
 } from 'lucide-react';
@@ -48,6 +49,7 @@ export function WorkLogsPage() {
   const [endDate, setEndDate] = useState(searchParams.get('endDate') ?? '');
   const [formOpen, setFormOpen] = useState(false);
   const [editingWorkLog, setEditingWorkLog] = useState<WorkLog | null>(null);
+  const [templateWorkLog, setTemplateWorkLog] = useState<WorkLog | null>(null);
   const [deletingWorkLog, setDeletingWorkLog] = useState<WorkLog | null>(null);
   const createRequested = searchParams.get('new') === '1';
   const clientsQuery = useClients({ search: '', status: 'all' });
@@ -76,6 +78,7 @@ export function WorkLogsPage() {
     setFormOpen(open);
     if (!open) {
       setEditingWorkLog(null);
+      setTemplateWorkLog(null);
       if (searchParams.has('new')) {
         const next = new URLSearchParams(searchParams);
         next.delete('new');
@@ -86,11 +89,19 @@ export function WorkLogsPage() {
 
   const openCreate = () => {
     setEditingWorkLog(null);
+    setTemplateWorkLog(null);
     setFormOpen(true);
   };
 
   const openEdit = (workLog: WorkLog) => {
     setEditingWorkLog(workLog);
+    setTemplateWorkLog(null);
+    setFormOpen(true);
+  };
+
+  const openDuplicate = (workLog: WorkLog) => {
+    setEditingWorkLog(null);
+    setTemplateWorkLog(workLog);
     setFormOpen(true);
   };
 
@@ -165,6 +176,7 @@ export function WorkLogsPage() {
       render: (workLog) => (
         <WorkLogActions
           onDelete={() => setDeletingWorkLog(workLog)}
+          onDuplicate={() => openDuplicate(workLog)}
           onEdit={() => openEdit(workLog)}
           workLog={workLog}
         />
@@ -213,12 +225,26 @@ export function WorkLogsPage() {
     <div>
       <PageHeader
         actions={
-          <Button
-            disabled={!clients.length || !hasProjects || Boolean(activeTimer)}
-            onClick={openCreate}
-          >
-            <Plus className="size-4" /> Add work log
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              disabled={workLogs.length === 0 || Boolean(activeTimer)}
+              onClick={() => {
+                const latestWorkLog = workLogs[0];
+                if (latestWorkLog) {
+                  openDuplicate(latestWorkLog);
+                }
+              }}
+              variant="secondary"
+            >
+              <Copy className="size-4" /> Duplicate last
+            </Button>
+            <Button
+              disabled={!clients.length || !hasProjects || Boolean(activeTimer)}
+              onClick={openCreate}
+            >
+              <Plus className="size-4" /> Add work log
+            </Button>
+          </div>
         }
         description="Track daily deliverables, dates, hours, and billable value so reports and invoices stay accurate."
         eyebrow="Work logs"
@@ -368,6 +394,7 @@ export function WorkLogsPage() {
                   <WorkLogMobileCard
                     key={workLog.id}
                     onDelete={() => setDeletingWorkLog(workLog)}
+                    onDuplicate={() => openDuplicate(workLog)}
                     onEdit={() => openEdit(workLog)}
                     workLog={workLog}
                   />
@@ -404,6 +431,7 @@ export function WorkLogsPage() {
         defaultProjectId={projectId || undefined}
         onOpenChange={closeForm}
         open={formOpen}
+        templateWorkLog={templateWorkLog}
         workLog={editingWorkLog}
       />
       <WorkLogDeleteDialog
@@ -419,10 +447,12 @@ export function WorkLogsPage() {
 
 function WorkLogMobileCard({
   onDelete,
+  onDuplicate,
   onEdit,
   workLog,
 }: {
   onDelete: () => void;
+  onDuplicate: () => void;
   onEdit: () => void;
   workLog: WorkLog;
 }) {
@@ -441,7 +471,12 @@ function WorkLogMobileCard({
             {workLog.client.name}
           </Link>
         </div>
-        <WorkLogActions onDelete={onDelete} onEdit={onEdit} workLog={workLog} />
+        <WorkLogActions
+          onDelete={onDelete}
+          onDuplicate={onDuplicate}
+          onEdit={onEdit}
+          workLog={workLog}
+        />
       </div>
       <div className="text-muted mt-4 grid gap-2 text-sm sm:grid-cols-2">
         <p className="flex items-center gap-2">
