@@ -23,6 +23,7 @@ export const invoiceItemFormSchema = z.object({
   quantity: moneyString('Hours', 10_000),
   rate: moneyString('Rate', 1_000_000),
   workLogId: z.string().trim().optional(),
+  expenseId: z.string().trim().optional(),
 });
 
 export const invoiceFormSchema = z
@@ -54,9 +55,8 @@ export const generateInvoiceSchema = z
     clientId: z.string().min(1, 'Select a client.'),
     issueDate: z.string().min(1, 'Select the issue date.'),
     dueDate: z.string().min(1, 'Select the due date.'),
-    workLogIds: z
-      .array(z.string().min(1))
-      .min(1, 'Select at least one work log.'),
+    workLogIds: z.array(z.string().min(1)),
+    expenseIds: z.array(z.string().min(1)),
     discount: moneyString('Discount', 1_000_000_000, true),
     taxRate: moneyString('Tax rate', 100, true),
     notes: optionalText(4000),
@@ -70,6 +70,13 @@ export const generateInvoiceSchema = z
         message: 'Due date must be on or after the issue date.',
       });
     }
+    if (values.workLogIds.length === 0 && values.expenseIds.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['workLogIds'],
+        message: 'Select at least one work log or expense.',
+      });
+    }
   });
 
 export interface InvoiceItemFormValues {
@@ -77,6 +84,7 @@ export interface InvoiceItemFormValues {
   quantity: string;
   rate: string;
   workLogId?: string;
+  expenseId?: string;
 }
 
 export interface InvoiceFormValues {
@@ -96,6 +104,7 @@ export interface GenerateInvoiceValues {
   issueDate: string;
   dueDate: string;
   workLogIds: string[];
+  expenseIds: string[];
   discount: string;
   taxRate: string;
   notes?: string;

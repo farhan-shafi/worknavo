@@ -10,6 +10,10 @@ import {
   type InvoiceItem,
 } from '../../models/Invoice.model.js';
 import {
+  ExpenseModel,
+  type ExpenseDocument,
+} from '../../models/Expense.model.js';
+import {
   WorkLogModel,
   type WorkLogDocument,
 } from '../../models/WorkLog.model.js';
@@ -88,6 +92,7 @@ function normalizedItems(
     quantity: number;
     rate: number;
     workLogId?: string;
+    expenseId?: string;
   }>,
 ): InvoiceItem[] {
   return items.map((item) => ({
@@ -97,6 +102,9 @@ function normalizedItems(
     amount: roundMoney(item.quantity * item.rate),
     ...(item.workLogId
       ? { workLogId: new Types.ObjectId(item.workLogId) }
+      : {}),
+    ...(item.expenseId
+      ? { expenseId: new Types.ObjectId(item.expenseId) }
       : {}),
   }));
 }
@@ -118,6 +126,16 @@ function workLogIdsFromItems(items: InvoiceItem[]) {
     ...new Set(
       items.flatMap((item) =>
         item.workLogId ? [item.workLogId.toString()] : [],
+      ),
+    ),
+  ];
+}
+
+function expenseIdsFromItems(items: InvoiceItem[]) {
+  return [
+    ...new Set(
+      items.flatMap((item) =>
+        item.expenseId ? [item.expenseId.toString()] : [],
       ),
     ),
   ];
@@ -218,6 +236,57 @@ async function requireInvoiceWorkLogs(
   return workLogs;
 }
 
+async function requireInvoiceExpenses(
+  actor: WorkspaceActor,
+  clientId: string,
+  expenseIds: string[],
+  currentInvoiceId?: string,
+) {
+  const uniqueIds = [...new Set(expenseIds)];
+
+  if (uniqueIds.some((expenseId) => !isValidObjectId(expenseId))) {
+    throw new ApiError(422, 'Select valid expenses for this invoice.');
+  }
+
+  if (uniqueIds.length === 0) {
+    return [];
+  }
+
+  const expenses = await ExpenseModel.find({
+    _id: { $in: uniqueIds },
+    organizationId: actor.organization._id,
+  });
+
+  if (expenses.length !== uniqueIds.length) {
+    throw new ApiError(422, 'Some selected expenses were not found.');
+  }
+
+  for (const expense of expenses) {
+    if (expense.clientId.toString() !== clientId) {
+      throw new ApiError(
+        422,
+        'All linked expenses must belong to the selected client.',
+      );
+    }
+
+    if (!expense.billable) {
+      throw new ApiError(422, 'Only billable expenses can be invoiced.');
+    }
+
+    if (
+      expense.invoiceId &&
+      expense.invoiceId.toString() !== currentInvoiceId
+    ) {
+      throw new ApiError(
+        409,
+        'One or more selected expenses already belong to another invoice.',
+      );
+    }
+  }
+
+  return expenses;
+}
+
 async function syncInvoiceWorkLogs(
   actor: WorkspaceActor,
   invoiceId: string,
@@ -252,6 +321,46 @@ async function syncInvoiceWorkLogs(
 
   if (addedIds.length > 0) {
     await WorkLogModel.updateMany(
+      { _id: { $in: addedIds }, organizationId: actor.organization._id },
+      { $set: { invoiceId } },
+    );
+  }
+}
+
+async function syncInvoiceExpenses(
+  actor: WorkspaceActor,
+  invoiceId: string,
+  clientId: string,
+  nextExpenseIds: string[],
+) {
+  await requireInvoiceExpenses(actor, clientId, nextExpenseIds, invoiceId);
+
+  const previousExpenses = await ExpenseModel.find({
+    invoiceId,
+    organizationId: actor.organization._id,
+  }).select('_id');
+  const previousIds = previousExpenses.map((expense) => expense._id.toString());
+  const nextIds = [...new Set(nextExpenseIds)];
+  const removedIds = previousIds.filter(
+    (expenseId) => !nextIds.includes(expenseId),
+  );
+  const addedIds = nextIds.filter(
+    (expenseId) => !previousIds.includes(expenseId),
+  );
+
+  if (removedIds.length > 0) {
+    await ExpenseModel.updateMany(
+      {
+        _id: { $in: removedIds },
+        organizationId: actor.organization._id,
+        invoiceId,
+      },
+      { $unset: { invoiceId: 1 } },
+    );
+  }
+
+  if (addedIds.length > 0) {
+    await ExpenseModel.updateMany(
       { _id: { $in: addedIds }, organizationId: actor.organization._id },
       { $set: { invoiceId } },
     );
@@ -305,6 +414,7 @@ async function payloadForManualInvoice(
       quantity: number;
       rate: number;
       workLogId?: string;
+      expenseId?: string;
     }>;
     discount: number;
     taxRate: number;
@@ -316,16 +426,24 @@ async function payloadForManualInvoice(
   const client = await getClient(actor, input.clientId);
   const items = normalizedItems(input.items);
   const workLogIds = workLogIdsFromItems(items);
+  const expenseIds = expenseIdsFromItems(items);
   await requireInvoiceWorkLogs(
     actor,
     client._id.toString(),
     workLogIds,
     input.currentInvoiceId,
   );
+  await requireInvoiceExpenses(
+    actor,
+    client._id.toString(),
+    expenseIds,
+    input.currentInvoiceId,
+  );
   const totals = calculateTotals(items, input.discount, input.taxRate);
 
   return {
     client,
+    expenseIds,
     items,
     workLogIds,
     payload: {
@@ -354,6 +472,15 @@ function generatedItemForWorkLog(
     quantity: roundedInvoiceHours(workLog.durationHours, roundingMinutes),
     rate: workLog.hourlyRate,
     workLogId: workLog._id.toString(),
+  };
+}
+
+function generatedItemForExpense(expense: ExpenseDocument) {
+  return {
+    description: `Expense: ${expense.description} (${expense.expenseDate.toLocaleDateString()})`,
+    quantity: 1,
+    rate: expense.amount,
+    expenseId: expense._id.toString(),
   };
 }
 
@@ -443,10 +570,11 @@ export async function createInvoice(
   input: CreateInvoiceInput,
 ) {
   assertActorPermission(actor, 'invoices.manage');
-  const { client, payload, workLogIds } = await payloadForManualInvoice(actor, {
-    ...input,
-    status: input.status,
-  });
+  const { client, expenseIds, payload, workLogIds } =
+    await payloadForManualInvoice(actor, {
+      ...input,
+      status: input.status,
+    });
   const invoice = await InvoiceModel.create({
     ...payload,
     invoiceNumber: await nextInvoiceNumber(actor),
@@ -460,6 +588,12 @@ export async function createInvoice(
     invoice._id.toString(),
     client._id.toString(),
     workLogIds,
+  );
+  await syncInvoiceExpenses(
+    actor,
+    invoice._id.toString(),
+    client._id.toString(),
+    expenseIds,
   );
 
   return toInvoiceContract(invoice, invoiceClient(client));
@@ -476,23 +610,34 @@ export async function generateInvoiceFromWorkLogs(
     client._id.toString(),
     input.workLogIds,
   );
+  const expenses = await requireInvoiceExpenses(
+    actor,
+    client._id.toString(),
+    input.expenseIds,
+  );
 
-  const currencies = [...new Set(workLogs.map((workLog) => workLog.currency))];
+  const currencies = [
+    ...new Set([
+      ...workLogs.map((workLog) => workLog.currency),
+      ...expenses.map((expense) => expense.currency),
+    ]),
+  ];
   if (currencies.length !== 1) {
     throw new ApiError(
       422,
-      'Selected work logs must use the same currency to generate one invoice.',
+      'Selected work logs and expenses must use the same currency to generate one invoice.',
     );
   }
 
-  const items = normalizedItems(
-    workLogs.map((workLog) =>
+  const items = normalizedItems([
+    ...workLogs.map((workLog) =>
       generatedItemForWorkLog(
         workLog,
         actor.organization.invoiceTimeRoundingMinutes ?? 0,
       ),
     ),
-  );
+    ...expenses.map(generatedItemForExpense),
+  ]);
   const totals = calculateTotals(items, input.discount, input.taxRate);
   const invoice = await InvoiceModel.create({
     userId: actor.user._id,
@@ -518,6 +663,12 @@ export async function generateInvoiceFromWorkLogs(
     invoice._id.toString(),
     client._id.toString(),
     input.workLogIds,
+  );
+  await syncInvoiceExpenses(
+    actor,
+    invoice._id.toString(),
+    client._id.toString(),
+    input.expenseIds,
   );
 
   return toInvoiceContract(invoice, invoiceClient(client));
@@ -563,26 +714,29 @@ export async function updateInvoice(
       quantity: item.quantity,
       rate: item.rate,
       ...(item.workLogId ? { workLogId: item.workLogId } : {}),
+      ...(item.expenseId ? { expenseId: item.expenseId } : {}),
     })) ??
     currentInvoice.items.map((item) => ({
       description: item.description,
       quantity: item.quantity,
       rate: item.rate,
       ...(item.workLogId ? { workLogId: item.workLogId.toString() } : {}),
+      ...(item.expenseId ? { expenseId: item.expenseId.toString() } : {}),
     }));
 
-  const { client, payload, workLogIds } = await payloadForManualInvoice(actor, {
-    clientId: input.clientId ?? currentInvoice.clientId.toString(),
-    issueDate: input.issueDate ?? currentInvoice.issueDate,
-    dueDate: input.dueDate ?? currentInvoice.dueDate,
-    currency: input.currency ?? currentInvoice.currency,
-    items: nextItems,
-    discount: input.discount ?? currentInvoice.discount,
-    taxRate: input.taxRate ?? currentInvoice.taxRate,
-    notes: input.notes === undefined ? currentInvoice.notes : input.notes,
-    status: nextStatus,
-    currentInvoiceId: currentInvoice._id.toString(),
-  });
+  const { client, expenseIds, payload, workLogIds } =
+    await payloadForManualInvoice(actor, {
+      clientId: input.clientId ?? currentInvoice.clientId.toString(),
+      issueDate: input.issueDate ?? currentInvoice.issueDate,
+      dueDate: input.dueDate ?? currentInvoice.dueDate,
+      currency: input.currency ?? currentInvoice.currency,
+      items: nextItems,
+      discount: input.discount ?? currentInvoice.discount,
+      taxRate: input.taxRate ?? currentInvoice.taxRate,
+      notes: input.notes === undefined ? currentInvoice.notes : input.notes,
+      status: nextStatus,
+      currentInvoiceId: currentInvoice._id.toString(),
+    });
 
   const updatePayload: Record<string, unknown> = { ...payload };
   const unsetPayload: Record<string, 1> = {};
@@ -611,6 +765,12 @@ export async function updateInvoice(
     invoice._id.toString(),
     client._id.toString(),
     workLogIds,
+  );
+  await syncInvoiceExpenses(
+    actor,
+    invoice._id.toString(),
+    client._id.toString(),
+    expenseIds,
   );
 
   return toInvoiceContract(invoice, invoiceClient(client));
@@ -649,6 +809,13 @@ export async function deleteInvoice(actor: WorkspaceActor, invoiceId: string) {
   }
 
   await WorkLogModel.updateMany(
+    {
+      invoiceId: invoice._id,
+      organizationId: actor.organization._id,
+    },
+    { $unset: { invoiceId: 1 } },
+  );
+  await ExpenseModel.updateMany(
     {
       invoiceId: invoice._id,
       organizationId: actor.organization._id,

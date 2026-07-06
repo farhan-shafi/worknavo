@@ -14,6 +14,7 @@ import {
 } from '../../components/ui/dialog';
 import { ApiError } from '../../lib/api-client';
 import { clientQueryKeys } from '../clients/client.queries';
+import { expenseQueryKeys } from '../expenses/expense.queries';
 import { workLogQueryKeys } from '../work-logs/work-log.queries';
 import { invoiceApi } from './invoice.api';
 import { invoiceQueryKeys } from './invoice.queries';
@@ -36,6 +37,7 @@ export function InvoiceDeleteDialog({
       void queryClient.invalidateQueries({ queryKey: invoiceQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: clientQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: workLogQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: expenseQueryKeys.all });
       toast.success(message);
       onOpenChange(false);
     },

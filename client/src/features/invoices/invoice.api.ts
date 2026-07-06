@@ -42,6 +42,7 @@ function manualInvoiceInput(values: InvoiceFormValues) {
       quantity: Number(item.quantity),
       rate: Number(item.rate),
       workLogId: item.workLogId || null,
+      expenseId: item.expenseId || null,
     })),
     discount: values.discount ? Number(values.discount) : 0,
     taxRate: values.taxRate ? Number(values.taxRate) : 0,

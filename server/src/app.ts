@@ -24,6 +24,7 @@ import { memberRouter } from './modules/members/member.routes.js';
 import { categoryRouter } from './modules/categories/category.routes.js';
 import { invitationRouter } from './modules/invitations/invitation.routes.js';
 import { analyticsRouter } from './modules/analytics/analytics.routes.js';
+import { expenseRouter } from './modules/expenses/expense.routes.js';
 
 const currentDirectory = dirname(fileURLToPath(import.meta.url));
 const clientDistPath = join(currentDirectory, '../../client/dist');
@@ -62,6 +63,7 @@ app.use('/api/members', memberRouter);
 app.use('/api/categories', categoryRouter);
 app.use('/api/invitations', invitationRouter);
 app.use('/api/analytics', analyticsRouter);
+app.use('/api/expenses', expenseRouter);
 app.use('/api/clients', clientRouter);
 app.use('/api/invoices', invoiceRouter);
 app.use('/api/reports', reportRouter);

@@ -22,6 +22,7 @@ import { Select } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { ApiError } from '../../lib/api-client';
 import { clientQueryKeys, useClients } from '../clients/client.queries';
+import { expenseQueryKeys, useExpenses } from '../expenses/expense.queries';
 import { formatMoney } from '../projects/project.utils';
 import { useWorkLogs, workLogQueryKeys } from '../work-logs/work-log.queries';
 import { formatHours, formatWorkLogDate } from '../work-logs/work-log.utils';
@@ -46,6 +47,7 @@ function defaultValues(
     issueDate: format(new Date(), 'yyyy-MM-dd'),
     dueDate: format(addDays(new Date(), 7), 'yyyy-MM-dd'),
     workLogIds: [],
+    expenseIds: [],
     discount: '',
     taxRate: '',
     notes: '',
@@ -66,11 +68,20 @@ export function GenerateInvoiceDialog({
   });
   const clientId = form.watch('clientId');
   const selectedWorkLogIds = form.watch('workLogIds');
+  const selectedExpenseIds = form.watch('expenseIds');
   const workLogsQuery = useWorkLogs({
     search: '',
     billable: 'all',
     clientId,
     projectId: '',
+    startDate: '',
+    endDate: '',
+  });
+  const expensesQuery = useExpenses({
+    clientId,
+    projectId: '',
+    billable: 'billable',
+    invoice: 'uninvoiced',
     startDate: '',
     endDate: '',
   });
@@ -81,6 +92,7 @@ export function GenerateInvoiceDialog({
       void queryClient.invalidateQueries({ queryKey: invoiceQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: clientQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: workLogQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: expenseQueryKeys.all });
       toast.success(message ?? 'Invoice generated successfully.');
       onOpenChange(false);
     },
@@ -103,6 +115,7 @@ export function GenerateInvoiceDialog({
 
   useEffect(() => {
     form.setValue('workLogIds', []);
+    form.setValue('expenseIds', []);
   }, [clientId, form]);
 
   const eligibleWorkLogs = (workLogsQuery.data?.workLogs ?? []).filter(
@@ -111,10 +124,15 @@ export function GenerateInvoiceDialog({
   const selectedWorkLogs = eligibleWorkLogs.filter((workLog) =>
     selectedWorkLogIds.includes(workLog.id),
   );
-  const subtotal = selectedWorkLogs.reduce(
-    (sum, workLog) => sum + workLog.amount,
-    0,
+  const eligibleExpenses = (expensesQuery.data?.expenses ?? []).filter(
+    (expense) => expense.billable && !expense.invoiceId,
   );
+  const selectedExpenses = eligibleExpenses.filter((expense) =>
+    selectedExpenseIds.includes(expense.id),
+  );
+  const subtotal =
+    selectedWorkLogs.reduce((sum, workLog) => sum + workLog.amount, 0) +
+    selectedExpenses.reduce((sum, expense) => sum + expense.amount, 0);
   const discount = Number(form.watch('discount')) || 0;
   const taxRate = Number(form.watch('taxRate')) || 0;
   const taxableAmount = Math.max(0, subtotal - discount);
@@ -135,14 +153,28 @@ export function GenerateInvoiceDialog({
     );
   };
 
+  const toggleExpense = (expenseId: string) => {
+    const currentIds = form.getValues('expenseIds');
+
+    form.setValue(
+      'expenseIds',
+      currentIds.includes(expenseId)
+        ? currentIds.filter((id) => id !== expenseId)
+        : [...currentIds, expenseId],
+      { shouldValidate: true },
+    );
+  };
+
   return (
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent className="max-h-[92vh] max-w-4xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Generate invoice from work logs</DialogTitle>
+          <DialogTitle>
+            Generate invoice from work logs and expenses
+          </DialogTitle>
           <DialogDescription>
-            Select completed billable logs that have not been invoiced yet and
-            turn them into one invoice.
+            Select completed billable logs and billable expenses that have not
+            been invoiced yet.
           </DialogDescription>
         </DialogHeader>
 
@@ -257,6 +289,61 @@ export function GenerateInvoiceDialog({
                             <Badge variant="neutral">{workLog.category}</Badge>
                           ) : null}
                         </div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3 pt-3">
+                <h3 className="font-extrabold">Eligible expenses</h3>
+                <Badge variant="neutral">
+                  {selectedExpenses.length} selected
+                </Badge>
+              </div>
+
+              {!clientId ? null : expensesQuery.isLoading ? (
+                <div className="rounded-2xl border p-6 text-sm text-slate-500">
+                  Loading expenses…
+                </div>
+              ) : eligibleExpenses.length === 0 ? (
+                <div className="rounded-2xl border p-6">
+                  <EmptyState
+                    compact
+                    description="No billable uninvoiced expenses were found for this client."
+                    icon={FileText}
+                    title="No expenses ready"
+                  />
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {eligibleExpenses.map((expense) => (
+                    <label
+                      className="hover:border-primary/25 flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition"
+                      key={expense.id}
+                    >
+                      <input
+                        checked={selectedExpenseIds.includes(expense.id)}
+                        className="mt-1"
+                        onChange={() => toggleExpense(expense.id)}
+                        type="checkbox"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <p className="font-bold">{expense.description}</p>
+                          <p className="text-sm font-extrabold">
+                            {formatMoney(expense.amount, expense.currency)}
+                          </p>
+                        </div>
+                        <p className="text-muted mt-1 text-sm">
+                          {expense.project?.name ?? 'No project'} ·{' '}
+                          {new Date(expense.expenseDate).toLocaleDateString()}
+                        </p>
+                        {expense.category ? (
+                          <Badge className="mt-3" variant="neutral">
+                            {expense.category}
+                          </Badge>
+                        ) : null}
                       </div>
                     </label>
                   ))}

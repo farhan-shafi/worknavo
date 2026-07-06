@@ -25,6 +25,7 @@ const invoiceItemSchema = z.object({
   quantity: z.coerce.number().gt(0).max(10_000),
   rate: z.coerce.number().min(0).max(1_000_000),
   workLogId: optionalString,
+  expenseId: optionalString,
 });
 
 const invoiceFields = {
@@ -73,7 +74,8 @@ export const updateInvoiceSchema = z
 export const generateInvoiceFromWorkLogsSchema = z
   .object({
     clientId: z.string().trim().min(1, 'Select a client.'),
-    workLogIds: z.array(z.string().trim().min(1)).min(1).max(50),
+    workLogIds: z.array(z.string().trim().min(1)).max(50).default([]),
+    expenseIds: z.array(z.string().trim().min(1)).max(50).default([]),
     issueDate: z.coerce.date(),
     dueDate: z.coerce.date(),
     discount: z.coerce.number().min(0).max(1_000_000_000).default(0),
@@ -87,6 +89,13 @@ export const generateInvoiceFromWorkLogsSchema = z
         code: z.ZodIssueCode.custom,
         path: ['dueDate'],
         message: 'Due date must be on or after the issue date.',
+      });
+    }
+    if (values.workLogIds.length === 0 && values.expenseIds.length === 0) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['workLogIds'],
+        message: 'Select at least one work log or expense.',
       });
     }
   });

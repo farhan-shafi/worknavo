@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  ReceiptText,
   Settings,
   ShieldCheck,
   UserRound,
@@ -107,6 +108,13 @@ const navigation: Array<{
     href: '/app/invoices',
     live: true,
     permission: 'invoices.view',
+  },
+  {
+    label: 'Expenses',
+    icon: ReceiptText,
+    href: '/app/expenses',
+    live: true,
+    permission: 'financials.view',
   },
   {
     label: 'Analytics',

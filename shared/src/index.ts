@@ -268,6 +268,43 @@ export interface WorkLogResponse {
   message?: string;
 }
 
+export type ExpenseBillableFilter = 'all' | 'billable' | 'non-billable';
+export type ExpenseInvoiceFilter = 'all' | 'uninvoiced' | 'invoiced';
+
+export interface Expense {
+  id: string;
+  clientId: string;
+  projectId: string | null;
+  invoiceId: string | null;
+  client: ProjectClient;
+  project: ProjectClient | null;
+  description: string;
+  category: string | null;
+  expenseDate: string;
+  amount: number;
+  currency: Currency;
+  billable: boolean;
+  receiptUrl: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpenseListResponse {
+  expenses: Expense[];
+  total: number;
+  summary: {
+    totalAmount: number;
+    billableAmount: number;
+    uninvoicedBillableAmount: number;
+  };
+}
+
+export interface ExpenseResponse {
+  expense: Expense;
+  message?: string;
+}
+
 export interface WeeklyReportClient {
   id: string;
   name: string;
@@ -319,6 +356,7 @@ export interface InvoiceItem {
   rate: number;
   amount: number;
   workLogId: string | null;
+  expenseId: string | null;
 }
 
 export interface Invoice {
@@ -339,6 +377,7 @@ export interface Invoice {
   status: InvoiceStatus;
   paidAt: string | null;
   linkedWorkLogCount: number;
+  linkedExpenseCount: number;
   createdAt: string;
   updatedAt: string;
 }

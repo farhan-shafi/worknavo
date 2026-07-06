@@ -22,6 +22,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { ApiError } from '../../lib/api-client';
 import { useAuth } from '../auth/use-auth';
 import { clientQueryKeys, useClients } from '../clients/client.queries';
+import { expenseQueryKeys } from '../expenses/expense.queries';
 import { workLogQueryKeys } from '../work-logs/work-log.queries';
 import { invoiceApi } from './invoice.api';
 import { invoiceQueryKeys } from './invoice.queries';
@@ -73,6 +74,7 @@ function valuesFromInvoice(
       quantity: String(item.quantity),
       rate: String(item.rate),
       ...(item.workLogId ? { workLogId: item.workLogId } : {}),
+      ...(item.expenseId ? { expenseId: item.expenseId } : {}),
     })),
     discount: invoice.discount ? String(invoice.discount) : '',
     taxRate: invoice.taxRate ? String(invoice.taxRate) : '',
@@ -108,6 +110,7 @@ export function InvoiceFormDialog({
       void queryClient.invalidateQueries({ queryKey: invoiceQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: clientQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: workLogQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: expenseQueryKeys.all });
       toast.success(message ?? 'Invoice saved successfully.');
       onOpenChange(false);
     },
@@ -300,6 +303,10 @@ export function InvoiceFormDialog({
                   <input
                     type="hidden"
                     {...form.register(`items.${index}.workLogId`)}
+                  />
+                  <input
+                    type="hidden"
+                    {...form.register(`items.${index}.expenseId`)}
                   />
                 </div>
               ))}

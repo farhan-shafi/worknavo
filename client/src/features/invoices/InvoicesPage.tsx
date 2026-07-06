@@ -23,6 +23,7 @@ import { Select } from '../../components/ui/select';
 import { Skeleton } from '../../components/ui/skeleton';
 import { ApiError } from '../../lib/api-client';
 import { clientQueryKeys, useClients } from '../clients/client.queries';
+import { expenseQueryKeys } from '../expenses/expense.queries';
 import { workLogQueryKeys } from '../work-logs/work-log.queries';
 import { InvoiceCard } from './InvoiceCard';
 import { invoiceApi } from './invoice.api';
@@ -59,6 +60,7 @@ export function InvoicesPage() {
       void queryClient.invalidateQueries({ queryKey: invoiceQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: clientQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: workLogQueryKeys.all });
+      void queryClient.invalidateQueries({ queryKey: expenseQueryKeys.all });
       toast.success(message ?? 'Invoice marked as paid.');
     },
     onError: (error) => {

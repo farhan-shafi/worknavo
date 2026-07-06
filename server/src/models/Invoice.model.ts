@@ -12,6 +12,7 @@ export interface InvoiceItem {
   rate: number;
   amount: number;
   workLogId?: Types.ObjectId;
+  expenseId?: Types.ObjectId;
 }
 
 export interface Invoice {
@@ -67,6 +68,10 @@ const invoiceItemSchema = new Schema<InvoiceItem>(
     workLogId: {
       type: Schema.Types.ObjectId,
       ref: 'WorkLog',
+    },
+    expenseId: {
+      type: Schema.Types.ObjectId,
+      ref: 'Expense',
     },
   },
   { _id: false },
@@ -195,6 +200,7 @@ export function toInvoiceContract(
       rate: item.rate,
       amount: item.amount,
       workLogId: item.workLogId?.toString() ?? null,
+      expenseId: item.expenseId?.toString() ?? null,
     })),
     subtotal: invoice.subtotal,
     discount: invoice.discount,
@@ -205,6 +211,7 @@ export function toInvoiceContract(
     status: invoice.status,
     paidAt: invoice.paidAt?.toISOString() ?? null,
     linkedWorkLogCount: invoice.items.filter((item) => item.workLogId).length,
+    linkedExpenseCount: invoice.items.filter((item) => item.expenseId).length,
     createdAt: invoice.createdAt.toISOString(),
     updatedAt: invoice.updatedAt.toISOString(),
   };

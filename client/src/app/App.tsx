@@ -59,6 +59,11 @@ const InvoicesPage = lazy(() =>
     default: module.InvoicesPage,
   })),
 );
+const ExpensesPage = lazy(() =>
+  import('../features/expenses/ExpensesPage').then((module) => ({
+    default: module.ExpensesPage,
+  })),
+);
 const ReportsPage = lazy(() =>
   import('../features/reports/ReportsPage').then((module) => ({
     default: module.ReportsPage,
@@ -133,6 +138,7 @@ export function App() {
             <Route element={<ProjectsPage />} path="projects" />
             <Route element={<ProjectTeamsPage />} path="project-teams" />
             <Route element={<InvoicesPage />} path="invoices" />
+            <Route element={<ExpensesPage />} path="expenses" />
             <Route element={<ReportsPage />} path="reports" />
             <Route element={<WorkLogsPage />} path="work-logs" />
             <Route element={<TeamPage />} path="team" />
