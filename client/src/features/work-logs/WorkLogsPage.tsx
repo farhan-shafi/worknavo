@@ -35,6 +35,7 @@ import { formatMoney } from '../projects/project.utils';
 import { WorkLogActions } from './WorkLogActions';
 import { WorkLogBillingBadge } from './WorkLogBillingBadge';
 import { WorkLogDeleteDialog } from './WorkLogDeleteDialog';
+import { WorkLogDetailDialog } from './WorkLogDetailDialog';
 import { WorkLogFormDialog } from './WorkLogFormDialog';
 import { useWorkLogs } from './work-log.queries';
 import { WorkLogTimerPanel } from './WorkLogTimerPanel';
@@ -64,6 +65,7 @@ export function WorkLogsPage() {
   const [editingWorkLog, setEditingWorkLog] = useState<WorkLog | null>(null);
   const [templateWorkLog, setTemplateWorkLog] = useState<WorkLog | null>(null);
   const [deletingWorkLog, setDeletingWorkLog] = useState<WorkLog | null>(null);
+  const [viewingWorkLog, setViewingWorkLog] = useState<WorkLog | null>(null);
   const createRequested = searchParams.get('new') === '1';
   const clientsQuery = useClients({ search: '', status: 'all' });
   const projectsQuery = useProjects({
@@ -270,6 +272,7 @@ export function WorkLogsPage() {
                     workLogId: workLog.id,
                   })
           }
+          onView={() => setViewingWorkLog(workLog)}
           workLog={workLog}
         />
       ),
@@ -502,6 +505,7 @@ export function WorkLogsPage() {
                         workLogId: workLog.id,
                       })
                     }
+                    onView={() => setViewingWorkLog(workLog)}
                     workLog={workLog}
                   />
                 ))
@@ -547,6 +551,13 @@ export function WorkLogsPage() {
         open={Boolean(deletingWorkLog)}
         workLog={deletingWorkLog}
       />
+      <WorkLogDetailDialog
+        onOpenChange={(open) => {
+          if (!open) setViewingWorkLog(null);
+        }}
+        open={Boolean(viewingWorkLog)}
+        workLog={viewingWorkLog}
+      />
     </div>
   );
 }
@@ -559,6 +570,7 @@ function WorkLogMobileCard({
   onEdit,
   onReject,
   onSubmitApproval,
+  onView,
   workLog,
 }: {
   canManageApprovals: boolean;
@@ -568,6 +580,7 @@ function WorkLogMobileCard({
   onEdit: () => void;
   onReject: () => void;
   onSubmitApproval: () => void;
+  onView: () => void;
   workLog: WorkLog;
 }) {
   return (
@@ -592,6 +605,7 @@ function WorkLogMobileCard({
           onEdit={onEdit}
           onReject={canManageApprovals ? onReject : undefined}
           onSubmitApproval={canManageApprovals ? undefined : onSubmitApproval}
+          onView={onView}
           workLog={workLog}
         />
       </div>

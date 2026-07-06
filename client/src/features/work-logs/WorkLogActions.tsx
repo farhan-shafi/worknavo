@@ -2,6 +2,7 @@ import type { WorkLog } from '@clientflow/shared';
 import {
   CheckCircle2,
   Copy,
+  Eye,
   MoreHorizontal,
   Pencil,
   Send,
@@ -26,6 +27,7 @@ export function WorkLogActions({
   onApprove,
   onReject,
   onSubmitApproval,
+  onView,
   workLog,
 }: {
   onDelete: () => void;
@@ -34,6 +36,7 @@ export function WorkLogActions({
   onApprove?: () => void;
   onReject?: () => void;
   onSubmitApproval?: () => void;
+  onView?: () => void;
   workLog: WorkLog;
 }) {
   const lockedByInvoice = Boolean(workLog.invoiceId);
@@ -52,6 +55,11 @@ export function WorkLogActions({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        {onView ? (
+          <DropdownMenuItem onSelect={onView}>
+            <Eye className="size-4" /> View details
+          </DropdownMenuItem>
+        ) : null}
         {lockedByInvoice ? (
           <>
             <DropdownMenuLabel>Linked to an invoice</DropdownMenuLabel>

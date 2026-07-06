@@ -2,6 +2,10 @@ import type { HealthResponse, SessionResponse } from '@clientflow/shared';
 
 const API_URL = import.meta.env.VITE_API_URL ?? '/api';
 
+export function apiAssetUrl(path: string) {
+  return `${API_URL}${path}`;
+}
+
 export class ApiError extends Error {
   constructor(
     message: string,
