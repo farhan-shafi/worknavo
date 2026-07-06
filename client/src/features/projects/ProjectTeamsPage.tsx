@@ -168,7 +168,22 @@ export function ProjectTeamsPage() {
                   {member.projectHoursThisWeek.toFixed(2)}h
                 </p>
                 <p className="text-muted text-xs">
-                  of {member.weeklyCapacity}h weekly capacity
+                  {member.plannedHoursPerWeek === null
+                    ? 'No project plan set'
+                    : `${member.plannedHoursPerWeek.toFixed(2)}h planned here`}
+                </p>
+                <p className="text-muted text-xs">
+                  {member.totalPlannedHoursThisWeek.toFixed(2)}h planned total ·{' '}
+                  {member.plannedAllocationPercent.toFixed(1)}% capacity
+                </p>
+                {member.projectPlanRemainingHours !== null ? (
+                  <p className="text-muted text-xs">
+                    {member.projectPlanRemainingHours.toFixed(2)}h remaining on
+                    this project
+                  </p>
+                ) : null}
+                <p className="text-muted text-xs">
+                  Weekly capacity {member.weeklyCapacity}h
                 </p>
               </div>
             </div>

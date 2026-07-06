@@ -6,6 +6,7 @@ export interface ProjectAssignment {
   membershipId: Types.ObjectId;
   assignmentType: 'project_manager' | 'contributor';
   categoryIds: Types.ObjectId[];
+  plannedHoursPerWeek?: number;
   startDate?: Date;
   endDate?: Date;
   active: boolean;
@@ -42,6 +43,7 @@ const projectAssignmentSchema = new Schema<ProjectAssignment>(
       required: true,
     },
     categoryIds: [{ type: Schema.Types.ObjectId, ref: 'WorkCategory' }],
+    plannedHoursPerWeek: { type: Number, min: 0, max: 168 },
     startDate: Date,
     endDate: Date,
     active: { type: Boolean, default: true, required: true, index: true },

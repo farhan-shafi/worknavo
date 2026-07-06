@@ -438,6 +438,9 @@ function MemberEditor({
   const [jobTitle, setJobTitle] = useState('');
   const [capacity, setCapacity] = useState('40');
   const [projectIds, setProjectIds] = useState<string[]>([]);
+  const [plannedHoursByProject, setPlannedHoursByProject] = useState<
+    Record<string, string>
+  >({});
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [allow, setAllow] = useState<Permission[]>([]);
   const [deny, setDeny] = useState<Permission[]>([]);
@@ -448,6 +451,16 @@ function MemberEditor({
     setJobTitle(member.jobTitle ?? '');
     setCapacity(String(member.weeklyCapacity));
     setProjectIds(member.projectIds);
+    setPlannedHoursByProject(
+      Object.fromEntries(
+        member.assignments.map((assignment) => [
+          assignment.projectId,
+          assignment.plannedHoursPerWeek === null
+            ? ''
+            : String(assignment.plannedHoursPerWeek),
+        ]),
+      ),
+    );
     setCategoryIds([
       ...new Set(
         member.assignments.flatMap((assignment) => assignment.categoryIds),
@@ -473,6 +486,9 @@ function MemberEditor({
           assignmentType:
             role === 'project_manager' ? 'project_manager' : 'contributor',
           categoryIds,
+          plannedHoursPerWeek: plannedHoursByProject[projectId]
+            ? Number(plannedHoursByProject[projectId])
+            : undefined,
         })),
       );
     },
@@ -545,26 +561,59 @@ function MemberEditor({
           </div>
           <div>
             <p className="text-sm font-bold">Assigned projects</p>
+            <p className="text-muted mt-1 text-xs">
+              Planned hours create capacity forecasts in Project Teams and
+              Analytics.
+            </p>
             <div className="mt-2 grid gap-2 sm:grid-cols-2">
               {projects.map((project) => (
-                <label
-                  className="border-border flex items-center gap-3 rounded-xl border p-3 text-sm"
+                <div
+                  className="border-border rounded-xl border p-3 text-sm"
                   key={project.id}
                 >
-                  <input
-                    checked={projectIds.includes(project.id)}
-                    className="accent-primary"
-                    onChange={(event) =>
-                      setProjectIds((current) =>
-                        event.target.checked
-                          ? [...current, project.id]
-                          : current.filter((id) => id !== project.id),
-                      )
-                    }
-                    type="checkbox"
-                  />
-                  {project.name}
-                </label>
+                  <label className="flex items-center gap-3">
+                    <input
+                      checked={projectIds.includes(project.id)}
+                      className="accent-primary"
+                      onChange={(event) => {
+                        setProjectIds((current) =>
+                          event.target.checked
+                            ? [...current, project.id]
+                            : current.filter((id) => id !== project.id),
+                        );
+                        if (!event.target.checked) {
+                          setPlannedHoursByProject((current) => {
+                            const next = { ...current };
+                            delete next[project.id];
+                            return next;
+                          });
+                        }
+                      }}
+                      type="checkbox"
+                    />
+                    <span className="font-semibold">{project.name}</span>
+                  </label>
+                  {projectIds.includes(project.id) ? (
+                    <label className="mt-3 block">
+                      <span className="text-muted mb-1 block text-xs font-bold uppercase">
+                        Planned hours/week
+                      </span>
+                      <Input
+                        max={168}
+                        min={0}
+                        onChange={(event) =>
+                          setPlannedHoursByProject((current) => ({
+                            ...current,
+                            [project.id]: event.target.value,
+                          }))
+                        }
+                        placeholder="0"
+                        type="number"
+                        value={plannedHoursByProject[project.id] ?? ''}
+                      />
+                    </label>
+                  ) : null}
+                </div>
               ))}
             </div>
           </div>

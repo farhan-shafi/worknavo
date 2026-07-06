@@ -29,6 +29,7 @@ const projectAssignmentInputSchema = z.object({
     .enum(['project_manager', 'contributor'])
     .default('contributor'),
   categoryIds: z.array(z.string().trim().min(1)).default([]),
+  plannedHoursPerWeek: z.coerce.number().min(0).max(168).optional(),
 });
 
 function startOfWeek(date: Date) {
@@ -100,6 +101,24 @@ projectRouter.get('/:id/team', async (request, response) => {
       { $group: { _id: '$membershipId', hours: { $sum: '$durationHours' } } },
     ]),
   ]);
+  const plannedRows = await ProjectAssignmentModel.aggregate<{
+    _id: unknown;
+    plannedHours: number;
+  }>([
+    {
+      $match: {
+        organizationId: actor.organization._id,
+        membershipId: { $in: membershipIds },
+        ...activeAssignmentWindow(),
+      },
+    },
+    {
+      $group: {
+        _id: '$membershipId',
+        plannedHours: { $sum: { $ifNull: ['$plannedHoursPerWeek', 0] } },
+      },
+    },
+  ]);
   const users = await UserModel.find({
     _id: { $in: memberships.map((membership) => membership.userId) },
   });
@@ -110,12 +129,19 @@ projectRouter.get('/:id/team', async (request, response) => {
   const hoursByMembershipId = new Map(
     hours.map((row) => [String(row._id), row.hours]),
   );
+  const plannedHoursByMembershipId = new Map(
+    plannedRows.map((row) => [String(row._id), row.plannedHours]),
+  );
 
   response.json({
     members: assignments.flatMap((assignment) => {
       const membership = membershipById.get(assignment.membershipId.toString());
       if (!membership) return [];
       const user = userById.get(membership.userId.toString());
+      const projectHoursThisWeek =
+        hoursByMembershipId.get(membership._id.toString()) ?? 0;
+      const totalPlannedHoursThisWeek =
+        plannedHoursByMembershipId.get(membership._id.toString()) ?? 0;
       return [
         {
           membershipId: membership._id.toString(),
@@ -128,10 +154,26 @@ projectRouter.get('/:id/team', async (request, response) => {
           categoryIds: assignment.categoryIds.map((categoryId) =>
             categoryId.toString(),
           ),
+          plannedHoursPerWeek: assignment.plannedHoursPerWeek ?? null,
           weeklyCapacity: membership.weeklyCapacity,
           status: membership.status,
-          projectHoursThisWeek:
-            hoursByMembershipId.get(membership._id.toString()) ?? 0,
+          projectHoursThisWeek,
+          totalPlannedHoursThisWeek,
+          projectPlanRemainingHours:
+            assignment.plannedHoursPerWeek === undefined
+              ? null
+              : Math.max(
+                  assignment.plannedHoursPerWeek - projectHoursThisWeek,
+                  0,
+                ),
+          plannedAllocationPercent: membership.weeklyCapacity
+            ? Number(
+                (
+                  (totalPlannedHoursThisWeek / membership.weeklyCapacity) *
+                  100
+                ).toFixed(1),
+              )
+            : 0,
         },
       ];
     }),
@@ -163,6 +205,7 @@ projectRouter.get('/:id/assignments', async (request, response) => {
       projectId: assignment.projectId.toString(),
       assignmentType: assignment.assignmentType,
       categoryIds: assignment.categoryIds.map(String),
+      plannedHoursPerWeek: assignment.plannedHoursPerWeek ?? null,
       startDate: assignment.startDate?.toISOString() ?? null,
       endDate: assignment.endDate?.toISOString() ?? null,
       active: assignment.active,
@@ -189,6 +232,14 @@ projectRouter.post('/:id/assignments', async (request, response) => {
   ]);
   if (!project) throw new ApiError(404, 'Project not found.');
   if (!membership) throw new ApiError(404, 'Member not found.');
+  const assignmentSet: Record<string, unknown> = {
+    assignmentType: assignmentInput.assignmentType,
+    categoryIds: assignmentInput.categoryIds,
+    active: true,
+  };
+  if (assignmentInput.plannedHoursPerWeek !== undefined) {
+    assignmentSet.plannedHoursPerWeek = assignmentInput.plannedHoursPerWeek;
+  }
   const assignment = await ProjectAssignmentModel.findOneAndUpdate(
     {
       organizationId: actor.organization._id,
@@ -196,11 +247,10 @@ projectRouter.post('/:id/assignments', async (request, response) => {
       membershipId,
     },
     {
-      $set: {
-        assignmentType: assignmentInput.assignmentType,
-        categoryIds: assignmentInput.categoryIds,
-        active: true,
-      },
+      $set: assignmentSet,
+      ...(assignmentInput.plannedHoursPerWeek === undefined
+        ? { $unset: { plannedHoursPerWeek: 1 } }
+        : {}),
     },
     { new: true, upsert: true, runValidators: true },
   );

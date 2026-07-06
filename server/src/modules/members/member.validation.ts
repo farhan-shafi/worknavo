@@ -50,6 +50,7 @@ export const assignProjectsSchema = z.object({
         .enum(['project_manager', 'contributor'])
         .default('contributor'),
       categoryIds: z.array(z.string().trim().min(1)).default([]),
+      plannedHoursPerWeek: z.coerce.number().min(0).max(168).optional(),
     }),
   ),
 });

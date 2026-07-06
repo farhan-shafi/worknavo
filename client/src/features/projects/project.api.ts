@@ -24,9 +24,13 @@ export interface ProjectTeamMember {
   role: MembershipRole;
   assignmentType: 'project_manager' | 'contributor';
   categoryIds: string[];
+  plannedHoursPerWeek: number | null;
   weeklyCapacity: number;
   status: 'active' | 'suspended';
   projectHoursThisWeek: number;
+  totalPlannedHoursThisWeek: number;
+  projectPlanRemainingHours: number | null;
+  plannedAllocationPercent: number;
 }
 
 function queryString(filters: ProjectFilters) {

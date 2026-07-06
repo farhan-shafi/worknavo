@@ -3,11 +3,13 @@ import { z } from 'zod';
 
 import {
   actorHas,
+  projectVisibilityQuery,
   workspaceActor,
   workLogVisibilityQuery,
 } from '../../auth/workspace-context.js';
 import { requireAuth } from '../../middleware/auth.middleware.js';
 import { OrganizationMembershipModel } from '../../models/OrganizationMembership.model.js';
+import { ProjectAssignmentModel } from '../../models/ProjectAssignment.model.js';
 import { ProjectModel } from '../../models/Project.model.js';
 import { UserModel } from '../../models/User.model.js';
 import { WorkLogModel } from '../../models/WorkLog.model.js';
@@ -35,6 +37,26 @@ function dateFilter(startDate?: Date, endDate?: Date) {
 function csvCell(value: unknown) {
   const text = String(value ?? '');
   return `"${text.replaceAll('"', '""')}"`;
+}
+
+function activeAssignmentWindow(date = new Date()) {
+  return {
+    active: true,
+    $or: [
+      { startDate: { $exists: false } },
+      { startDate: null },
+      { startDate: { $lte: date } },
+    ],
+    $and: [
+      {
+        $or: [
+          { endDate: { $exists: false } },
+          { endDate: null },
+          { endDate: { $gte: date } },
+        ],
+      },
+    ],
+  };
 }
 
 export const analyticsRouter = Router();
@@ -137,6 +159,10 @@ analyticsRouter.get('/team', async (request, response) => {
     throw new ApiError(403, 'You cannot view team analytics.');
   }
   const filters = analyticsFilters.parse(request.query);
+  const visibleProjects = await ProjectModel.find(
+    await projectVisibilityQuery(actor),
+  ).select('_id name');
+  const visibleProjectIds = visibleProjects.map((project) => project._id);
   const query = {
     ...(await workLogVisibilityQuery(actor)),
     status: 'completed',
@@ -145,91 +171,129 @@ analyticsRouter.get('/team', async (request, response) => {
     ...(filters.membershipId ? { membershipId: filters.membershipId } : {}),
     ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
   };
-  const [byMember, byProject, totals] = await Promise.all([
-    WorkLogModel.aggregate<{
-      _id: unknown;
-      hours: number;
-      billableHours: number;
-      billableValue: number;
-    }>([
-      { $match: query },
-      {
-        $group: {
-          _id: '$membershipId',
-          hours: { $sum: '$durationHours' },
-          billableHours: {
-            $sum: { $cond: ['$billable', '$durationHours', 0] },
-          },
-          billableValue: {
-            $sum: {
-              $cond: [
-                '$billable',
-                { $multiply: ['$durationHours', '$hourlyRate'] },
-                0,
-              ],
+  const assignmentMatch = {
+    organizationId: actor.organization._id,
+    projectId: { $in: visibleProjectIds },
+    ...activeAssignmentWindow(),
+  };
+  const [byMember, byProject, totals, plannedByMember, plannedByProject] =
+    await Promise.all([
+      WorkLogModel.aggregate<{
+        _id: unknown;
+        hours: number;
+        billableHours: number;
+        billableValue: number;
+      }>([
+        { $match: query },
+        {
+          $group: {
+            _id: '$membershipId',
+            hours: { $sum: '$durationHours' },
+            billableHours: {
+              $sum: { $cond: ['$billable', '$durationHours', 0] },
+            },
+            billableValue: {
+              $sum: {
+                $cond: [
+                  '$billable',
+                  { $multiply: ['$durationHours', '$hourlyRate'] },
+                  0,
+                ],
+              },
             },
           },
         },
-      },
-      { $sort: { hours: -1 } },
-    ]),
-    WorkLogModel.aggregate<{
-      _id: unknown;
-      hours: number;
-      billableHours: number;
-      billableValue: number;
-    }>([
-      { $match: query },
-      {
-        $group: {
-          _id: '$projectId',
-          hours: { $sum: '$durationHours' },
-          billableHours: {
-            $sum: { $cond: ['$billable', '$durationHours', 0] },
-          },
-          billableValue: {
-            $sum: {
-              $cond: [
-                '$billable',
-                { $multiply: ['$durationHours', '$hourlyRate'] },
-                0,
-              ],
+        { $sort: { hours: -1 } },
+      ]),
+      WorkLogModel.aggregate<{
+        _id: unknown;
+        hours: number;
+        billableHours: number;
+        billableValue: number;
+      }>([
+        { $match: query },
+        {
+          $group: {
+            _id: '$projectId',
+            hours: { $sum: '$durationHours' },
+            billableHours: {
+              $sum: { $cond: ['$billable', '$durationHours', 0] },
+            },
+            billableValue: {
+              $sum: {
+                $cond: [
+                  '$billable',
+                  { $multiply: ['$durationHours', '$hourlyRate'] },
+                  0,
+                ],
+              },
             },
           },
         },
-      },
-      { $sort: { hours: -1 } },
-    ]),
-    WorkLogModel.aggregate<{
-      _id: null;
-      hours: number;
-      billableHours: number;
-      billableValue: number;
-    }>([
-      { $match: query },
-      {
-        $group: {
-          _id: null,
-          hours: { $sum: '$durationHours' },
-          billableHours: {
-            $sum: { $cond: ['$billable', '$durationHours', 0] },
-          },
-          billableValue: {
-            $sum: {
-              $cond: [
-                '$billable',
-                { $multiply: ['$durationHours', '$hourlyRate'] },
-                0,
-              ],
+        { $sort: { hours: -1 } },
+      ]),
+      WorkLogModel.aggregate<{
+        _id: null;
+        hours: number;
+        billableHours: number;
+        billableValue: number;
+      }>([
+        { $match: query },
+        {
+          $group: {
+            _id: null,
+            hours: { $sum: '$durationHours' },
+            billableHours: {
+              $sum: { $cond: ['$billable', '$durationHours', 0] },
+            },
+            billableValue: {
+              $sum: {
+                $cond: [
+                  '$billable',
+                  { $multiply: ['$durationHours', '$hourlyRate'] },
+                  0,
+                ],
+              },
             },
           },
         },
-      },
+      ]),
+      ProjectAssignmentModel.aggregate<{
+        _id: unknown;
+        plannedHours: number;
+      }>([
+        { $match: assignmentMatch },
+        {
+          $group: {
+            _id: '$membershipId',
+            plannedHours: { $sum: { $ifNull: ['$plannedHoursPerWeek', 0] } },
+          },
+        },
+        { $sort: { plannedHours: -1 } },
+      ]),
+      ProjectAssignmentModel.aggregate<{
+        _id: unknown;
+        plannedHours: number;
+      }>([
+        { $match: assignmentMatch },
+        {
+          $group: {
+            _id: '$projectId',
+            plannedHours: { $sum: { $ifNull: ['$plannedHoursPerWeek', 0] } },
+          },
+        },
+        { $sort: { plannedHours: -1 } },
+      ]),
+    ]);
+  const membershipIds = [
+    ...new Set([
+      ...byMember.map((row) => String(row._id)),
+      ...plannedByMember.map((row) => String(row._id)),
     ]),
-  ]);
-  const membershipIds = byMember.map((row) => row._id);
+  ];
   const memberships = await OrganizationMembershipModel.find({
     _id: { $in: membershipIds },
+    organizationId: actor.organization._id,
   });
   const users = await UserModel.find({
     _id: { $in: memberships.map((membership) => membership.userId) },
@@ -238,41 +302,96 @@ analyticsRouter.get('/team', async (request, response) => {
   const membershipById = new Map(
     memberships.map((membership) => [String(membership._id), membership]),
   );
-  const projects = await ProjectModel.find({
-    _id: { $in: byProject.map((row) => row._id) },
-  });
   const projectById = new Map(
-    projects.map((project) => [String(project._id), project]),
+    visibleProjects.map((project) => [String(project._id), project]),
   );
   const showMoney = actorHas(actor, 'financials.view');
+  const loggedHoursByMember = new Map(
+    byMember.map((row) => [String(row._id), row]),
+  );
+  const plannedHoursByMember = new Map(
+    plannedByMember.map((row) => [String(row._id), row.plannedHours]),
+  );
+  const loggedHoursByProject = new Map(
+    byProject.map((row) => [String(row._id), row]),
+  );
+  const plannedHoursByProject = new Map(
+    plannedByProject.map((row) => [String(row._id), row.plannedHours]),
+  );
+  const projectIds = [
+    ...new Set([
+      ...byProject.map((row) => String(row._id)),
+      ...plannedByProject.map((row) => String(row._id)),
+    ]),
+  ];
+  const totalCapacity = memberships.reduce(
+    (sum, membership) =>
+      sum + (membership.status === 'active' ? membership.weeklyCapacity : 0),
+    0,
+  );
+  const totalPlannedHours = plannedByMember.reduce(
+    (sum, row) => sum + row.plannedHours,
+    0,
+  );
+  const totalLoggedHours = totals[0]?.hours ?? 0;
   response.json({
     totals: {
-      hours: totals[0]?.hours ?? 0,
+      hours: totalLoggedHours,
       billableHours: totals[0]?.billableHours ?? 0,
       billableValue: showMoney ? (totals[0]?.billableValue ?? 0) : null,
+      capacityHours: totalCapacity,
+      plannedHours: totalPlannedHours,
+      remainingCapacityHours: Math.max(totalCapacity - totalPlannedHours, 0),
+      plannedUtilization:
+        totalCapacity > 0
+          ? Number(((totalPlannedHours / totalCapacity) * 100).toFixed(1))
+          : 0,
+      loggedUtilization:
+        totalCapacity > 0
+          ? Number(((totalLoggedHours / totalCapacity) * 100).toFixed(1))
+          : 0,
     },
-    members: byMember.map((row) => {
-      const membership = membershipById.get(String(row._id));
+    members: membershipIds.map((membershipId) => {
+      const row = loggedHoursByMember.get(membershipId);
+      const membership = membershipById.get(membershipId);
       const user = membership
         ? userById.get(String(membership.userId))
         : undefined;
+      const capacity = membership?.weeklyCapacity ?? null;
+      const plannedHours = plannedHoursByMember.get(membershipId) ?? 0;
+      const loggedHours = row?.hours ?? 0;
       return {
-        membershipId: String(row._id),
+        membershipId,
         name: user?.name ?? 'Former member',
         role: membership?.role ?? null,
-        hours: row.hours,
-        billableHours: row.billableHours,
-        billableValue: showMoney ? row.billableValue : null,
-        capacity: membership?.weeklyCapacity ?? null,
+        hours: loggedHours,
+        billableHours: row?.billableHours ?? 0,
+        billableValue: showMoney ? (row?.billableValue ?? 0) : null,
+        capacity,
+        plannedHours,
+        remainingCapacity:
+          capacity === null ? null : Math.max(capacity - plannedHours, 0),
+        plannedUtilization:
+          capacity && capacity > 0
+            ? Number(((plannedHours / capacity) * 100).toFixed(1))
+            : 0,
+        loggedUtilization:
+          capacity && capacity > 0
+            ? Number(((loggedHours / capacity) * 100).toFixed(1))
+            : 0,
       };
     }),
-    projects: byProject.map((row) => ({
-      projectId: String(row._id),
-      name: projectById.get(String(row._id))?.name ?? 'Archived project',
-      hours: row.hours,
-      billableHours: row.billableHours,
-      billableValue: showMoney ? row.billableValue : null,
-    })),
+    projects: projectIds.map((projectId) => {
+      const row = loggedHoursByProject.get(projectId);
+      return {
+        projectId,
+        name: projectById.get(projectId)?.name ?? 'Archived project',
+        hours: row?.hours ?? 0,
+        billableHours: row?.billableHours ?? 0,
+        billableValue: showMoney ? (row?.billableValue ?? 0) : null,
+        plannedHours: plannedHoursByProject.get(projectId) ?? 0,
+      };
+    }),
   });
 });
 

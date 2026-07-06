@@ -68,6 +68,7 @@ async function memberContract(
       categoryIds: assignment.categoryIds.map((categoryId) =>
         categoryId.toString(),
       ),
+      plannedHoursPerWeek: assignment.plannedHoursPerWeek ?? null,
     })),
     joinedAt: membership.joinedAt.toISOString(),
   };
@@ -205,6 +206,7 @@ memberRouter.post('/:id/projects', async (request, response) => {
         projectId: assignment.projectId,
         assignmentType: assignment.assignmentType,
         categoryIds: assignment.categoryIds,
+        plannedHoursPerWeek: assignment.plannedHoursPerWeek,
         active: true,
       })),
     );

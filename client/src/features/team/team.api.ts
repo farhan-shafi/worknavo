@@ -19,6 +19,7 @@ export interface TeamMember {
     projectId: string;
     assignmentType: 'project_manager' | 'contributor';
     categoryIds: string[];
+    plannedHoursPerWeek: number | null;
   }>;
   joinedAt: string;
 }
@@ -79,6 +80,7 @@ export const teamApi = {
       projectId: string;
       assignmentType: 'project_manager' | 'contributor';
       categoryIds: string[];
+      plannedHoursPerWeek?: number;
     }>,
   ) =>
     request<{ message: string }>(`/members/${memberId}/projects`, {
