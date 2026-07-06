@@ -342,6 +342,41 @@ export interface WeeklyReportResponse {
   message?: string;
 }
 
+export type ScheduledReportFrequency = 'daily' | 'weekly' | 'monthly';
+
+export interface ScheduledReport {
+  id: string;
+  clientId: string | null;
+  client: WeeklyReportClient | null;
+  name: string;
+  frequency: ScheduledReportFrequency;
+  recipients: string[];
+  subject: string | null;
+  active: boolean;
+  nextRunAt: string;
+  lastSentAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ScheduledReportListResponse {
+  scheduledReports: ScheduledReport[];
+  total: number;
+}
+
+export interface ScheduledReportResponse {
+  scheduledReport: ScheduledReport;
+  message?: string;
+}
+
+export interface ScheduledReportRunResponse {
+  message: string;
+  processed: number;
+  sent: number;
+  failed: number;
+}
+
 export interface InvoiceClient {
   id: string;
   name: string;

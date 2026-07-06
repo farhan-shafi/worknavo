@@ -134,9 +134,9 @@ async function sendResendEmail(input: SendEmailInput) {
     }),
   });
 
-  const body = (await response.json().catch(() => null)) as
-    | ResendEmailResponse
-    | null;
+  const body = (await response
+    .json()
+    .catch(() => null)) as ResendEmailResponse | null;
 
   if (!response.ok) {
     throw new ApiError(
@@ -254,5 +254,19 @@ export async function sendPasswordResetEmail(input: {
     subject: 'Reset your ClientFlow password',
     text: `Hi ${input.recipientName},\n\nUse this link to reset your ClientFlow password:\n${input.resetUrl}\n\nThis link expires in 1 hour. If you did not request it, you can ignore this email.`,
     html: `<p>Hi ${input.recipientName},</p><p>Use this link to reset your ClientFlow password:</p><p><a href="${input.resetUrl}">Reset password</a></p><p>This link expires in 1 hour. If you did not request it, you can ignore this email.</p>`,
+  });
+}
+
+export async function sendScheduledSummaryEmail(input: {
+  recipient: string;
+  subject: string;
+  text: string;
+  html: string;
+}) {
+  return sendEmail({
+    to: input.recipient,
+    subject: input.subject,
+    text: input.text,
+    html: input.html,
   });
 }

@@ -120,3 +120,98 @@ export function invoiceEmailTemplate({
 
   return { html, subject, text };
 }
+
+export interface ScheduledSummaryEmailData {
+  organization: OrganizationDocument;
+  reportName: string;
+  periodLabel: string;
+  totalHours: number;
+  billableHours: number;
+  nonBillableHours: number;
+  topProjects: Array<{
+    name: string;
+    hours: number;
+  }>;
+  recentWork: Array<{
+    title: string;
+    projectName: string;
+    hours: number;
+  }>;
+}
+
+export function scheduledSummaryEmailTemplate({
+  organization,
+  reportName,
+  periodLabel,
+  totalHours,
+  billableHours,
+  nonBillableHours,
+  topProjects,
+  recentWork,
+}: ScheduledSummaryEmailData) {
+  const subject = `${reportName} — ${periodLabel}`;
+  const projectRows = topProjects.length
+    ? topProjects
+        .map(
+          (project) =>
+            `<tr>
+              <td style="padding:10px 0;border-bottom:1px solid #edf1f4">${escapeHtml(project.name)}</td>
+              <td style="padding:10px 0;border-bottom:1px solid #edf1f4;text-align:right;font-weight:bold">${project.hours.toFixed(2)}h</td>
+            </tr>`,
+        )
+        .join('')
+    : `<tr><td colspan="2" style="padding:12px 0;color:#667581">No project time was logged in this period.</td></tr>`;
+  const workRows = recentWork.length
+    ? recentWork
+        .map(
+          (work) =>
+            `<li style="margin:0 0 8px">
+              <strong>${escapeHtml(work.title)}</strong>
+              <span style="color:#667581"> — ${escapeHtml(work.projectName)}, ${work.hours.toFixed(2)}h</span>
+            </li>`,
+        )
+        .join('')
+    : `<li style="color:#667581">No completed work logs were found.</li>`;
+  const text = [
+    reportName,
+    periodLabel,
+    '',
+    `Total hours: ${totalHours.toFixed(2)}h`,
+    `Billable hours: ${billableHours.toFixed(2)}h`,
+    `Non-billable hours: ${nonBillableHours.toFixed(2)}h`,
+    '',
+    'Top projects:',
+    ...(topProjects.length
+      ? topProjects.map(
+          (project) => `- ${project.name}: ${project.hours.toFixed(2)}h`,
+        )
+      : ['- No project time was logged.']),
+    '',
+    `Sent by ${senderName(organization)} via ClientFlow.`,
+  ].join('\n');
+  const html = emailShell(
+    `<p style="margin-top:0;color:#667581">Scheduled summary for <strong>${escapeHtml(periodLabel)}</strong>.</p>
+     <h1 style="margin:0 0 18px;font-size:24px;line-height:1.25">${escapeHtml(reportName)}</h1>
+     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:22px 0">
+       <div style="background:#fff0e9;border-radius:12px;padding:14px">
+         <div style="color:#667581;font-size:11px;text-transform:uppercase">Total</div>
+         <div style="font-size:22px;font-weight:bold;color:#e35d22">${totalHours.toFixed(2)}h</div>
+       </div>
+       <div style="background:#f5f7f8;border-radius:12px;padding:14px">
+         <div style="color:#667581;font-size:11px;text-transform:uppercase">Billable</div>
+         <div style="font-size:22px;font-weight:bold">${billableHours.toFixed(2)}h</div>
+       </div>
+       <div style="background:#f5f7f8;border-radius:12px;padding:14px">
+         <div style="color:#667581;font-size:11px;text-transform:uppercase">Non-billable</div>
+         <div style="font-size:22px;font-weight:bold">${nonBillableHours.toFixed(2)}h</div>
+       </div>
+     </div>
+     <h2 style="font-size:16px;margin:24px 0 8px">Project breakdown</h2>
+     <table style="border-collapse:collapse;width:100%;font-size:14px">${projectRows}</table>
+     <h2 style="font-size:16px;margin:24px 0 8px">Recent work</h2>
+     <ul style="margin:0;padding-left:18px">${workRows}</ul>`,
+    organization,
+  );
+
+  return { html, subject, text };
+}

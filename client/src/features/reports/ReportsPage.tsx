@@ -23,6 +23,7 @@ import { ReportDeleteDialog } from './ReportDeleteDialog';
 import { ReportFormDialog } from './ReportFormDialog';
 import { useWeeklyReports } from './report.queries';
 import { useAuth } from '../auth/use-auth';
+import { ScheduledReportsPanel } from './ScheduledReportsPanel';
 
 export function ReportsPage() {
   const { permissions } = useAuth();
@@ -120,6 +121,10 @@ export function ReportsPage() {
           value={`${totalHours.toFixed(2)}h`}
         />
       </div>
+
+      {permissions.includes('reports.manage') ? (
+        <ScheduledReportsPanel />
+      ) : null}
 
       <Card className="mt-6 p-4">
         <div className="grid gap-3 lg:grid-cols-[1.6fr_0.8fr_0.8fr_0.8fr_0.8fr]">
