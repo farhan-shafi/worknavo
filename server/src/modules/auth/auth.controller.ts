@@ -16,9 +16,12 @@ import {
   requestPasswordReset,
   resetUserPassword,
   switchUserOrganization,
+  getAvatarFile,
+  updateUserAvatar,
   updateUserSettings,
 } from './auth.service.js';
 import {
+  avatarUploadSchema,
   forgotPasswordSchema,
   loginSchema,
   registerSchema,
@@ -211,6 +214,38 @@ export async function updateSettings(request: Request, response: Response) {
     user,
   };
   response.status(200).json(body);
+}
+
+export async function uploadAvatar(request: Request, response: Response) {
+  if (!request.user) {
+    throw new ApiError(401, 'You need to log in to continue.');
+  }
+
+  const input = avatarUploadSchema.parse(request.body);
+  const user = await updateUserAvatar(request.user, input);
+  const body: AuthResponse = {
+    message: 'Profile image updated successfully.',
+    user,
+  };
+  response.status(200).json(body);
+}
+
+export async function showAvatar(request: Request, response: Response) {
+  if (!request.user) {
+    throw new ApiError(401, 'You need to log in to continue.');
+  }
+
+  const filename = request.params.filename;
+  if (typeof filename !== 'string') {
+    throw new ApiError(404, 'Profile image not found.');
+  }
+
+  const { absolutePath, mimeType } = getAvatarFile(filename);
+  response
+    .status(200)
+    .type(mimeType)
+    .set({ 'Cache-Control': 'private, max-age=3600' })
+    .sendFile(absolutePath);
 }
 
 export async function replaceTemporaryPassword(

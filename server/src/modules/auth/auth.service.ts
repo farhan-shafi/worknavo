@@ -1,4 +1,6 @@
-import { randomInt } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
+import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 
 import bcrypt from 'bcryptjs';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
@@ -19,6 +21,7 @@ import type {
   RegisterInput,
   ResetPasswordInput,
   UpdateSettingsInput,
+  AvatarUploadInput,
 } from './auth.validation.js';
 import { sendPasswordResetEmail } from '../email/email.service.js';
 
@@ -27,6 +30,7 @@ const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const REMEMBERED_REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 const PASSWORD_RESET_TTL_MINUTES = 15;
 const PASSWORD_RESET_TTL_MS = PASSWORD_RESET_TTL_MINUTES * 60 * 1000;
+const avatarUploadDirectory = join(process.cwd(), 'uploads', 'avatars');
 
 interface TokenPayload extends JwtPayload {
   sub: string;
@@ -90,6 +94,42 @@ function safeEmailErrorDetails(error: unknown) {
     name: error.name,
     responseCode: maybeSmtpError.responseCode,
   };
+}
+
+function parseAvatarDataUrl(dataUrl: string) {
+  const match = dataUrl.match(/^data:(image\/(?:jpeg|png|webp));base64,(.+)$/);
+
+  if (!match?.[1] || !match[2]) {
+    throw new ApiError(422, 'Upload a JPG, PNG, or WebP profile image.');
+  }
+
+  const buffer = Buffer.from(match[2], 'base64');
+  if (buffer.length > 850_000) {
+    throw new ApiError(
+      413,
+      'Profile image is too large. Upload an image under 850 KB.',
+    );
+  }
+
+  const extensionByMimeType = {
+    'image/jpeg': 'jpg',
+    'image/png': 'png',
+    'image/webp': 'webp',
+  } as const;
+
+  return {
+    buffer,
+    extension:
+      extensionByMimeType[match[1] as keyof typeof extensionByMimeType],
+    mimeType: match[1],
+  };
+}
+
+function avatarFilenameFromUrl(avatarUrl?: string) {
+  const match = avatarUrl?.match(
+    /^\/auth\/avatar\/([a-z0-9-]+\.(?:jpg|png|webp))$/i,
+  );
+  return match?.[1] ?? null;
 }
 
 export async function registerUser(input: RegisterInput) {
@@ -276,4 +316,47 @@ export async function updateUserSettings(
   await user.save();
 
   return toAuthUser(user);
+}
+
+export async function updateUserAvatar(
+  user: UserDocument,
+  input: AvatarUploadInput,
+) {
+  const parsed = parseAvatarDataUrl(input.imageDataUrl);
+  const filename = `${user._id.toString()}-${randomUUID()}.${parsed.extension}`;
+  const storagePath = join(avatarUploadDirectory, filename);
+  const previousFilename = avatarFilenameFromUrl(user.avatarUrl);
+
+  await mkdir(avatarUploadDirectory, { recursive: true });
+  await writeFile(storagePath, parsed.buffer);
+
+  user.avatarUrl = `/auth/avatar/${filename}`;
+  await user.save();
+
+  if (previousFilename) {
+    await unlink(join(avatarUploadDirectory, previousFilename)).catch(
+      () => undefined,
+    );
+  }
+
+  return toAuthUser(user);
+}
+
+export function getAvatarFile(filename: string) {
+  if (!/^[a-z0-9-]+\.(?:jpg|png|webp)$/i.test(filename)) {
+    throw new ApiError(404, 'Profile image not found.');
+  }
+
+  const extension = filename.split('.').at(-1)?.toLowerCase();
+  const mimeType =
+    extension === 'png'
+      ? 'image/png'
+      : extension === 'webp'
+        ? 'image/webp'
+        : 'image/jpeg';
+
+  return {
+    absolutePath: join(avatarUploadDirectory, filename),
+    mimeType,
+  };
 }

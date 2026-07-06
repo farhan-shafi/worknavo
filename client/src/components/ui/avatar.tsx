@@ -1,5 +1,6 @@
 import type { HTMLAttributes } from 'react';
 
+import { apiAssetUrl } from '../../lib/api-client';
 import { cn } from '../../lib/utils';
 
 interface AvatarProps extends HTMLAttributes<HTMLSpanElement> {
@@ -28,6 +29,7 @@ export function Avatar({
     .join('')
     .slice(0, 2)
     .toUpperCase();
+  const imageSrc = src?.startsWith('/') ? apiAssetUrl(src) : src;
 
   return (
     <span
@@ -38,8 +40,8 @@ export function Avatar({
       )}
       {...props}
     >
-      {src ? (
-        <img alt={name} className="size-full object-cover" src={src} />
+      {imageSrc ? (
+        <img alt={name} className="size-full object-cover" src={imageSrc} />
       ) : (
         initials
       )}

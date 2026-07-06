@@ -62,6 +62,11 @@ export const authApi = {
       method: 'PATCH',
       body: JSON.stringify(payload),
     }),
+  updateAvatar: (imageDataUrl: string) =>
+    request<AuthResponse>('/auth/avatar', {
+      method: 'POST',
+      body: JSON.stringify({ imageDataUrl }),
+    }),
   switchOrganization: (organizationId: string) =>
     request<SessionResponse>('/auth/switch-organization', {
       method: 'POST',

@@ -83,7 +83,17 @@ export const updateSettingsSchema = z.object({
   defaultInvoiceNotes: optionalText(2000),
 });
 
+export const avatarUploadSchema = z.object({
+  imageDataUrl: z
+    .string()
+    .regex(
+      /^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/,
+      'Upload a JPG, PNG, or WebP profile image.',
+    ),
+});
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 export type UpdateSettingsInput = z.infer<typeof updateSettingsSchema>;
+export type AvatarUploadInput = z.infer<typeof avatarUploadSchema>;

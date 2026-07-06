@@ -13,8 +13,10 @@ import {
   refresh,
   register,
   resetPassword,
+  showAvatar,
   switchOrganization,
   updateSettings,
+  uploadAvatar,
   replaceTemporaryPassword,
 } from './auth.controller.js';
 
@@ -26,6 +28,8 @@ authRouter.post('/logout', logout);
 authRouter.post('/refresh', authRateLimit, refresh);
 authRouter.get('/me', requireAuth, me);
 authRouter.patch('/settings', requireAuth, updateSettings);
+authRouter.post('/avatar', requireAuth, uploadAvatar);
+authRouter.get('/avatar/:filename', requireAuth, showAvatar);
 authRouter.post(
   '/replace-temporary-password',
   requireAuth,

@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
+  Camera,
   CircleDollarSign,
   FileText,
   ListChecks,
@@ -9,11 +10,12 @@ import {
   Save,
   UserRound,
 } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { type ChangeEvent, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
 import { toast } from 'sonner';
 
 import { PageHeader } from '../../components/shared/PageHeader';
+import { Avatar } from '../../components/ui/avatar';
 import { Button } from '../../components/ui/button';
 import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
@@ -146,8 +148,58 @@ export function SettingsPage() {
       );
     },
   });
+  const uploadAvatar = useMutation({
+    mutationFn: (imageDataUrl: string) => authApi.updateAvatar(imageDataUrl),
+    onSuccess: ({ message, user: updatedUser }) => {
+      queryClient.setQueryData(sessionQueryKey, (current: unknown) =>
+        current && typeof current === 'object'
+          ? {
+              ...current,
+              user: updatedUser,
+            }
+          : current,
+      );
+      toast.success(message);
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : 'Unable to update your profile image.',
+      );
+    },
+  });
   const fieldError = (field: keyof SettingsFormValues) =>
     form.formState.errors[field]?.message;
+  const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+      toast.error('Upload a JPG, PNG, or WebP profile image.');
+      return;
+    }
+
+    if (file.size > 850_000) {
+      toast.error('Profile image is too large. Upload an image under 850 KB.');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener('load', () => {
+      if (typeof reader.result === 'string') {
+        uploadAvatar.mutate(reader.result);
+      }
+    });
+    reader.addEventListener('error', () => {
+      toast.error('Could not read that image. Try a different file.');
+    });
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="space-y-6">
@@ -166,6 +218,34 @@ export function SettingsPage() {
           icon={<UserRound className="size-5" />}
           title="Profile"
         >
+          <div className="mb-6 flex flex-wrap items-center gap-4">
+            <Avatar
+              className="size-16 text-base"
+              name={user?.name ?? 'User'}
+              src={user?.avatarUrl}
+            />
+            <div>
+              <p className="text-sm font-extrabold">Profile image</p>
+              <p className="text-muted mt-1 text-xs">
+                JPG, PNG, or WebP up to 850 KB.
+              </p>
+              <label className="border-border hover:border-primary/30 hover:bg-primary-soft/20 mt-3 inline-flex h-9 cursor-pointer items-center justify-center gap-2 rounded-lg border bg-white px-3 text-sm font-semibold transition">
+                {uploadAvatar.isPending ? (
+                  <LoaderCircle className="size-4 animate-spin" />
+                ) : (
+                  <Camera className="size-4" />
+                )}
+                {uploadAvatar.isPending ? 'Uploading…' : 'Upload photo'}
+                <input
+                  accept="image/jpeg,image/png,image/webp"
+                  className="sr-only"
+                  disabled={uploadAvatar.isPending}
+                  onChange={handleAvatarChange}
+                  type="file"
+                />
+              </label>
+            </div>
+          </div>
           <div className="grid gap-5 sm:grid-cols-2">
             <FormControl error={fieldError('name')} label="Your name" required>
               <Input autoComplete="name" {...form.register('name')} />
