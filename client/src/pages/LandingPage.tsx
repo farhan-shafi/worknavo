@@ -276,15 +276,15 @@ export function LandingPage() {
         <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between px-5 lg:px-8">
           <Brand />
           <nav className="text-muted hidden items-center gap-8 text-sm font-semibold md:flex">
-            <a className="hover:text-foreground transition" href="#features">
+            <Link className="hover:text-foreground transition" to="/features">
               Features
-            </a>
-            <a className="hover:text-foreground transition" href="#teams">
-              Teams
-            </a>
-            <a className="hover:text-foreground transition" href="#setup">
-              Get started
-            </a>
+            </Link>
+            <Link className="hover:text-foreground transition" to="/pricing">
+              Pricing
+            </Link>
+            <Link className="hover:text-foreground transition" to="/about">
+              About
+            </Link>
           </nav>
           <div className="flex items-center gap-2">
             <Button asChild className="hidden sm:inline-flex" variant="ghost">
@@ -458,6 +458,25 @@ export function LandingPage() {
           </Card>
         </section>
       </main>
+      <footer className="border-border bg-white px-5 py-10 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col gap-6 text-sm sm:flex-row sm:items-center sm:justify-between">
+          <Brand />
+          <div className="text-muted flex flex-wrap gap-5 font-semibold">
+            <Link className="hover:text-foreground" to="/features">
+              Features
+            </Link>
+            <Link className="hover:text-foreground" to="/pricing">
+              Pricing
+            </Link>
+            <Link className="hover:text-foreground" to="/about">
+              About
+            </Link>
+            <Link className="hover:text-foreground" to="/terms">
+              Terms
+            </Link>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }

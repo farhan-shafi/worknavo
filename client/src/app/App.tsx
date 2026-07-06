@@ -85,6 +85,26 @@ const LandingPage = lazy(() =>
     default: module.LandingPage,
   })),
 );
+const FeaturesPage = lazy(() =>
+  import('../pages/MarketingPages').then((module) => ({
+    default: module.FeaturesPage,
+  })),
+);
+const PricingPage = lazy(() =>
+  import('../pages/MarketingPages').then((module) => ({
+    default: module.PricingPage,
+  })),
+);
+const AboutPage = lazy(() =>
+  import('../pages/MarketingPages').then((module) => ({
+    default: module.AboutPage,
+  })),
+);
+const TermsPage = lazy(() =>
+  import('../pages/MarketingPages').then((module) => ({
+    default: module.TermsPage,
+  })),
+);
 const TeamPage = lazy(() =>
   import('../features/team/TeamPage').then((module) => ({
     default: module.TeamPage,
@@ -121,6 +141,10 @@ export function App() {
     <Suspense fallback={<DashboardLoadingSkeleton />}>
       <Routes>
         <Route element={<LandingPage />} path="/" />
+        <Route element={<FeaturesPage />} path="/features" />
+        <Route element={<PricingPage />} path="/pricing" />
+        <Route element={<AboutPage />} path="/about" />
+        <Route element={<TermsPage />} path="/terms" />
         <Route element={<LoginPage />} path="/login" />
         <Route element={<RegisterPage />} path="/register" />
         <Route element={<ForgotPasswordPage />} path="/forgot-password" />
