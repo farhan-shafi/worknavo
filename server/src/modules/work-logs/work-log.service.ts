@@ -35,6 +35,7 @@ import type {
   StartWorkLogTimerInput,
   UpdateWorkLogInput,
 } from './work-log.validation.js';
+import { evaluateProjectBudgetAlerts } from '../projects/budget-alerts.service.js';
 
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -509,6 +510,7 @@ export async function createWorkLog(
     entryMode: 'manual',
     status: 'completed',
   });
+  await evaluateProjectBudgetAlerts(actor.organization, project._id);
 
   return visibleWorkLogContract(
     actor,
@@ -584,6 +586,7 @@ export async function stopWorkLogTimer(actor: WorkspaceActor) {
   workLog.status = 'completed';
   workLog.workDate = workLog.timerStartedAt;
   await workLog.save();
+  await evaluateProjectBudgetAlerts(actor.organization, workLog.projectId);
 
   const { client, project } = await requireWorkLogRelations(
     actor,
@@ -715,6 +718,13 @@ export async function updateWorkLog(
 
   if (!workLog) {
     throw new ApiError(404, 'Work log not found.');
+  }
+  await evaluateProjectBudgetAlerts(
+    actor.organization,
+    currentWorkLog.projectId,
+  );
+  if (!sameObjectId(currentWorkLog.projectId, workLog.projectId)) {
+    await evaluateProjectBudgetAlerts(actor.organization, workLog.projectId);
   }
 
   if (locked) {

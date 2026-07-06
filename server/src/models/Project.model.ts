@@ -19,6 +19,7 @@ export interface Project {
   startDate?: Date;
   endDate?: Date;
   estimatedBudget?: number;
+  budgetAlertThresholdsSent: number[];
   allowedCategoryIds: Types.ObjectId[];
   createdAt: Date;
   updatedAt: Date;
@@ -80,6 +81,15 @@ const projectSchema = new Schema<Project>(
       type: Number,
       min: 0,
       max: 1_000_000_000,
+    },
+    budgetAlertThresholdsSent: {
+      type: [Number],
+      default: [],
+      validate: {
+        validator: (value: number[]) =>
+          value.every((threshold) => [50, 80, 100].includes(threshold)),
+        message: 'Unsupported budget alert threshold.',
+      },
     },
     allowedCategoryIds: [{ type: Schema.Types.ObjectId, ref: 'WorkCategory' }],
   },

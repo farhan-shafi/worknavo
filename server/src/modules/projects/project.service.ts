@@ -228,6 +228,10 @@ export async function updateProject(
     }
   }
 
+  if (Object.hasOwn(input, 'estimatedBudget')) {
+    setFields.budgetAlertThresholdsSent = [];
+  }
+
   const project = await ProjectModel.findOneAndUpdate(
     { _id: projectId, ...(await projectVisibilityQuery(actor)) },
     {
