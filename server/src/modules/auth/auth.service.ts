@@ -1,4 +1,4 @@
-import { createHash, randomBytes } from 'node:crypto';
+import { randomInt } from 'node:crypto';
 
 import bcrypt from 'bcryptjs';
 import jwt, { type JwtPayload } from 'jsonwebtoken';
@@ -25,7 +25,8 @@ import { sendPasswordResetEmail } from '../email/email.service.js';
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60;
 const REMEMBERED_REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
-const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000;
+const PASSWORD_RESET_TTL_MINUTES = 15;
+const PASSWORD_RESET_TTL_MS = PASSWORD_RESET_TTL_MINUTES * 60 * 1000;
 
 interface TokenPayload extends JwtPayload {
   sub: string;
@@ -69,10 +70,6 @@ function verifyToken(token: string, type: TokenPayload['type']) {
   }
 
   return payload as TokenPayload;
-}
-
-function hashPasswordResetToken(token: string) {
-  return createHash('sha256').update(token).digest('hex');
 }
 
 function safeEmailErrorDetails(error: unknown) {
@@ -144,8 +141,8 @@ export async function requestPasswordReset(email: string) {
     return;
   }
 
-  const token = randomBytes(32).toString('hex');
-  user.passwordResetTokenHash = hashPasswordResetToken(token);
+  const resetCode = String(randomInt(100_000, 1_000_000));
+  user.passwordResetTokenHash = await bcrypt.hash(resetCode, 12);
   user.passwordResetExpiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MS);
   await user.save();
 
@@ -153,7 +150,8 @@ export async function requestPasswordReset(email: string) {
     await sendPasswordResetEmail({
       recipient: user.email,
       recipientName: user.name,
-      resetUrl: `${env.CLIENT_URL}/reset-password?token=${token}`,
+      resetCode,
+      expiresInMinutes: PASSWORD_RESET_TTL_MINUTES,
     });
   } catch (error) {
     user.passwordResetTokenHash = undefined;
@@ -178,14 +176,17 @@ export async function requestPasswordReset(email: string) {
 
 export async function resetUserPassword(input: ResetPasswordInput) {
   const user = await UserModel.findOne({
-    passwordResetTokenHash: hashPasswordResetToken(input.token),
+    email: input.email,
     passwordResetExpiresAt: { $gt: new Date() },
   }).select('+passwordHash +passwordResetTokenHash +passwordResetExpiresAt');
 
-  if (!user) {
+  if (
+    !user?.passwordResetTokenHash ||
+    !(await bcrypt.compare(input.code, user.passwordResetTokenHash))
+  ) {
     throw new ApiError(
       400,
-      'This password reset link is invalid or expired. Request a new reset link.',
+      'This password reset code is invalid or expired. Request a new code.',
     );
   }
 

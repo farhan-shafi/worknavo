@@ -45,6 +45,13 @@ export function ForgotPasswordPage() {
           <p className="text-muted mt-2 text-sm leading-6">
             {resetRequest.data.message}
           </p>
+          <Button asChild className="mt-6 w-full" size="lg">
+            <Link
+              to={`/reset-password?email=${encodeURIComponent(form.getValues('email'))}`}
+            >
+              Enter reset code
+            </Link>
+          </Button>
         </div>
       ) : (
         <form
@@ -74,10 +81,10 @@ export function ForgotPasswordPage() {
             {resetRequest.isPending && (
               <LoaderCircle className="size-4 animate-spin" />
             )}
-            Send reset instructions
+            Send temporary code
           </Button>
           <p className="text-muted text-center text-xs leading-5">
-            We will email a secure reset link if the account exists.
+            We will email a secure temporary code if the account exists.
           </p>
         </form>
       )}

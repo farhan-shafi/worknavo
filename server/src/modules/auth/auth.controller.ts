@@ -185,7 +185,7 @@ export async function forgotPassword(request: Request, response: Response) {
   await requestPasswordReset(input.email);
   const body: MessageResponse = {
     message:
-      'If an account exists for that email, password reset instructions have been sent.',
+      'If an account exists for that email, a temporary reset code has been sent.',
   };
   response.status(202).json(body);
 }

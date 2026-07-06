@@ -52,7 +52,7 @@ export const authApi = {
       method: 'POST',
       body: JSON.stringify({ email }),
     }),
-  resetPassword: (payload: { token: string; password: string }) =>
+  resetPassword: (payload: { code: string; email: string; password: string }) =>
     request<MessageResponse>('/auth/reset-password', {
       method: 'POST',
       body: JSON.stringify(payload),

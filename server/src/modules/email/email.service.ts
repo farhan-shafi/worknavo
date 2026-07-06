@@ -247,13 +247,14 @@ export async function sendWorkspaceInvitationEmail(input: {
 export async function sendPasswordResetEmail(input: {
   recipient: string;
   recipientName: string;
-  resetUrl: string;
+  resetCode: string;
+  expiresInMinutes: number;
 }) {
   await sendEmail({
     to: input.recipient,
     subject: 'Reset your ClientFlow password',
-    text: `Hi ${input.recipientName},\n\nUse this link to reset your ClientFlow password:\n${input.resetUrl}\n\nThis link expires in 1 hour. If you did not request it, you can ignore this email.`,
-    html: `<p>Hi ${input.recipientName},</p><p>Use this link to reset your ClientFlow password:</p><p><a href="${input.resetUrl}">Reset password</a></p><p>This link expires in 1 hour. If you did not request it, you can ignore this email.</p>`,
+    text: `Hi ${input.recipientName},\n\nUse this temporary code to reset your ClientFlow password:\n${input.resetCode}\n\nThis code expires in ${input.expiresInMinutes} minutes. If you did not request it, you can ignore this email.`,
+    html: `<p>Hi ${input.recipientName},</p><p>Use this temporary code to reset your ClientFlow password:</p><p style="font-size:24px;font-weight:700;letter-spacing:6px">${input.resetCode}</p><p>This code expires in ${input.expiresInMinutes} minutes. If you did not request it, you can ignore this email.</p>`,
   });
 }
 

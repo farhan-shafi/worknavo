@@ -37,7 +37,11 @@ const passwordSchema = z
 
 export const resetPasswordSchema = z
   .object({
-    token: z.string().trim().min(1, 'Reset token is missing.'),
+    email: z.string().trim().email('Enter a valid email address.'),
+    code: z
+      .string()
+      .trim()
+      .regex(/^[0-9]{6}$/, 'Enter the 6-digit code from your email.'),
     password: passwordSchema,
     confirmPassword: z.string().min(1, 'Confirm your new password.'),
   })

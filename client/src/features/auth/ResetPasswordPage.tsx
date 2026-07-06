@@ -16,18 +16,23 @@ import {
 
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') ?? '';
+  const email = searchParams.get('email') ?? '';
   const form = useForm<ResetPasswordFormValues>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
-      token,
+      email,
+      code: '',
       password: '',
       confirmPassword: '',
     },
   });
   const resetPassword = useMutation({
-    mutationFn: ({ password, token: resetToken }: ResetPasswordFormValues) =>
-      authApi.resetPassword({ token: resetToken, password }),
+    mutationFn: ({
+      code,
+      email: resetEmail,
+      password,
+    }: ResetPasswordFormValues) =>
+      authApi.resetPassword({ code, email: resetEmail, password }),
   });
 
   return (
@@ -60,13 +65,24 @@ export function ResetPasswordPage() {
           className="space-y-5"
           onSubmit={form.handleSubmit((values) => resetPassword.mutate(values))}
         >
-          <input type="hidden" {...form.register('token')} />
-          {!token ? (
-            <p className="text-danger text-sm font-semibold">
-              This reset link is missing its token. Request a new password reset
-              email.
-            </p>
-          ) : null}
+          <FormField
+            autoComplete="email"
+            error={form.formState.errors.email?.message}
+            label="Email address"
+            placeholder="you@example.com"
+            registration={form.register('email')}
+            type="email"
+          />
+          <FormField
+            autoComplete="one-time-code"
+            error={form.formState.errors.code?.message}
+            inputMode="numeric"
+            label="Temporary code"
+            maxLength={6}
+            placeholder="6-digit code"
+            registration={form.register('code')}
+            type="text"
+          />
           <FormField
             autoComplete="new-password"
             error={form.formState.errors.password?.message}
@@ -92,7 +108,7 @@ export function ResetPasswordPage() {
           ) : null}
           <Button
             className="w-full"
-            disabled={resetPassword.isPending || !token}
+            disabled={resetPassword.isPending}
             size="lg"
           >
             {resetPassword.isPending && (

@@ -42,7 +42,11 @@ export const forgotPasswordSchema = z.object({
 });
 
 export const resetPasswordSchema = z.object({
-  token: z.string().trim().min(32).max(256),
+  email: emailSchema,
+  code: z
+    .string()
+    .trim()
+    .regex(/^[0-9]{6}$/, 'Enter the 6-digit code from your email.'),
   password: passwordSchema,
 });
 
