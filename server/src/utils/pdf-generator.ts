@@ -26,6 +26,18 @@ const page = {
 
 type PdfDocument = InstanceType<typeof PDFDocument>;
 
+interface InvoiceTableLayout {
+  amountX: number;
+  amountWidth: number;
+  descriptionWidth: number;
+  descriptionX: number;
+  hoursX: number;
+  hoursWidth: number;
+  rateX: number;
+  rateWidth: number;
+  tableWidth: number;
+}
+
 function formatDate(value: Date) {
   return new Intl.DateTimeFormat('en-US', {
     day: 'numeric',
@@ -61,6 +73,10 @@ function contentWidth(document: PdfDocument) {
   return document.page.width - page.left - page.right;
 }
 
+function clamp(value: number, minimum: number, maximum: number) {
+  return Math.min(maximum, Math.max(minimum, value));
+}
+
 function addPage(document: PdfDocument) {
   document.addPage();
   document.y = page.top;
@@ -91,49 +107,65 @@ function addBrandHeader(
   documentType: string,
 ) {
   const width = contentWidth(document);
+  const badgeWidth = 112;
+  const badgeX = document.page.width - page.right - badgeWidth;
+  const leftWidth = width - badgeWidth - 24;
+  let cursorY = page.top;
 
   document
     .font('Helvetica-Bold')
     .fontSize(18)
     .fillColor(colors.dark)
     .text(businessName(organization), page.left, page.top, {
-      width: width * 0.62,
+      width: leftWidth,
     });
+  cursorY +=
+    document.heightOfString(businessName(organization), {
+      width: leftWidth,
+    }) + 5;
 
-  document
-    .font('Helvetica')
-    .fontSize(9)
-    .fillColor(colors.muted)
-    .text(organization.businessEmail ?? '', page.left, page.top + 24, {
-      width: width * 0.62,
-    });
-  if (organization.businessAddress) {
+  if (organization.businessEmail) {
     document
-      .fontSize(8)
-      .text(organization.businessAddress, page.left, page.top + 39, {
-        width: width * 0.62,
+      .font('Helvetica')
+      .fontSize(9)
+      .fillColor(colors.muted)
+      .text(organization.businessEmail, page.left, cursorY, {
+        width: leftWidth,
       });
+    cursorY +=
+      document.heightOfString(organization.businessEmail, {
+        width: leftWidth,
+      }) + 4;
   }
 
-  document
-    .roundedRect(document.page.width - page.right - 112, page.top, 112, 29, 8)
-    .fill(colors.accent);
+  if (organization.businessAddress) {
+    document
+      .font('Helvetica')
+      .fontSize(8)
+      .fillColor(colors.muted)
+      .text(organization.businessAddress, page.left, cursorY, {
+        lineGap: 2,
+        width: leftWidth,
+      });
+    cursorY +=
+      document.heightOfString(organization.businessAddress, {
+        lineGap: 2,
+        width: leftWidth,
+      }) + 4;
+  }
+
+  document.roundedRect(badgeX, page.top, badgeWidth, 29, 8).fill(colors.accent);
   document
     .font('Helvetica-Bold')
     .fontSize(10)
     .fillColor(colors.white)
-    .text(
-      documentType.toUpperCase(),
-      document.page.width - page.right - 112,
-      page.top + 10,
-      {
-        align: 'center',
-        characterSpacing: 0.8,
-        width: 112,
-      },
-    );
+    .text(documentType.toUpperCase(), badgeX, page.top + 10, {
+      align: 'center',
+      characterSpacing: 0.8,
+      width: badgeWidth,
+    });
 
-  document.y = page.top + (organization.businessAddress ? 76 : 62);
+  document.y = Math.max(cursorY + 14, page.top + 62);
   horizontalRule(document);
   document.moveDown(1.4);
 }
@@ -144,6 +176,7 @@ function addStatusBadge(
   x: number,
   y: number,
 ) {
+  const previousY = document.y;
   const label = statusLabel(status).toUpperCase();
   const badgeWidth = Math.max(66, document.widthOfString(label) + 24);
   const fill =
@@ -160,6 +193,7 @@ function addStatusBadge(
       width: badgeWidth,
     });
 
+  document.y = previousY;
   return badgeWidth;
 }
 
@@ -224,8 +258,6 @@ function renderDocument(
 }
 
 function addClientBlock(document: PdfDocument, client: ClientDocument) {
-  const x = page.left;
-  const y = document.y;
   const width = contentWidth(document);
   const detailLines = [
     client.name !== clientDisplayName(client) ? client.name : null,
@@ -241,6 +273,8 @@ function addClientBlock(document: PdfDocument, client: ClientDocument) {
   const boxHeight = Math.max(80, detailHeight + 43);
 
   ensureSpace(document, boxHeight + 8);
+  const x = page.left;
+  const y = document.y;
   document.roundedRect(x, y, width, boxHeight, 10).fill(colors.pale);
   document
     .font('Helvetica-Bold')
@@ -267,44 +301,111 @@ function addClientBlock(document: PdfDocument, client: ClientDocument) {
   document.y = y + boxHeight + 24;
 }
 
-function addInvoiceTableHeader(document: PdfDocument) {
+function invoiceTableLayout(
+  document: PdfDocument,
+  invoice: InvoiceDocument,
+): InvoiceTableLayout {
   const width = contentWidth(document);
+  const gap = 12;
+  const horizontalPadding = 12;
+  const innerWidth = width - horizontalPadding * 2;
+
+  document.font('Helvetica-Bold').fontSize(8);
+  const hoursHeaderWidth = document.widthOfString('HOURS');
+  const rateHeaderWidth = document.widthOfString('RATE');
+  const amountHeaderWidth = document.widthOfString('AMOUNT');
+
+  document.font('Helvetica').fontSize(9);
+  const hoursContentWidth = Math.max(
+    hoursHeaderWidth,
+    ...invoice.items.map((item) =>
+      document.widthOfString(item.quantity.toFixed(2)),
+    ),
+  );
+  const rateContentWidth = Math.max(
+    rateHeaderWidth,
+    ...invoice.items.map((item) =>
+      document.widthOfString(formatMoney(item.rate, invoice.currency)),
+    ),
+  );
+  const amountContentWidth = Math.max(
+    amountHeaderWidth,
+    ...invoice.items.map((item) =>
+      document.widthOfString(formatMoney(item.amount, invoice.currency)),
+    ),
+    document.widthOfString(formatMoney(invoice.total, invoice.currency)),
+  );
+
+  const hoursWidth = clamp(hoursContentWidth + 12, 48, 64);
+  const rateWidth = clamp(rateContentWidth + 14, 82, 116);
+  const amountWidth = clamp(amountContentWidth + 14, 92, 132);
+  const descriptionWidth = Math.max(
+    150,
+    innerWidth - hoursWidth - rateWidth - amountWidth - gap * 3,
+  );
+  const descriptionX = page.left + horizontalPadding;
+  const hoursX = descriptionX + descriptionWidth + gap;
+  const rateX = hoursX + hoursWidth + gap;
+  const amountX = rateX + rateWidth + gap;
+
+  return {
+    amountX,
+    amountWidth,
+    descriptionWidth,
+    descriptionX,
+    hoursX,
+    hoursWidth,
+    rateX,
+    rateWidth,
+    tableWidth: width,
+  };
+}
+
+function addInvoiceTableHeader(
+  document: PdfDocument,
+  layout: InvoiceTableLayout,
+) {
   const y = document.y;
 
-  document.roundedRect(page.left, y, width, 28, 7).fill(colors.dark);
+  document.roundedRect(page.left, y, layout.tableWidth, 28, 7).fill(colors.dark);
   document
     .font('Helvetica-Bold')
     .fontSize(8)
     .fillColor(colors.white)
-    .text('DESCRIPTION', page.left + 12, y + 10, { width: width - 245 })
-    .text('HOURS', page.left + width - 220, y + 10, {
-      align: 'right',
-      width: 50,
+    .text('DESCRIPTION', layout.descriptionX, y + 10, {
+      width: layout.descriptionWidth,
     })
-    .text('RATE', page.left + width - 150, y + 10, {
+    .text('HOURS', layout.hoursX, y + 10, {
       align: 'right',
-      width: 60,
+      width: layout.hoursWidth,
     })
-    .text('AMOUNT', page.left + width - 92, y + 10, {
+    .text('RATE', layout.rateX, y + 10, {
       align: 'right',
-      width: 80,
+      width: layout.rateWidth,
+    })
+    .text('AMOUNT', layout.amountX, y + 10, {
+      align: 'right',
+      width: layout.amountWidth,
     });
   document.y = y + 34;
 }
 
 function addInvoiceItems(document: PdfDocument, invoice: InvoiceDocument) {
-  addInvoiceTableHeader(document);
+  const layout = invoiceTableLayout(document, invoice);
+
+  addInvoiceTableHeader(document, layout);
   const width = contentWidth(document);
 
   invoice.items.forEach((item, index) => {
     document.font('Helvetica').fontSize(9);
     const descriptionHeight = document.heightOfString(item.description, {
-      width: width - 245,
+      lineGap: 2,
+      width: layout.descriptionWidth,
     });
-    const rowHeight = Math.max(34, descriptionHeight + 16);
+    const rowHeight = Math.max(38, descriptionHeight + 18);
 
     if (ensureSpace(document, rowHeight + 4)) {
-      addInvoiceTableHeader(document);
+      addInvoiceTableHeader(document, layout);
     }
 
     const y = document.y;
@@ -315,30 +416,26 @@ function addInvoiceItems(document: PdfDocument, invoice: InvoiceDocument) {
       .font('Helvetica')
       .fontSize(9)
       .fillColor(colors.dark)
-      .text(item.description, page.left + 12, y + 5, {
-        width: width - 245,
+      .text(item.description, layout.descriptionX, y + 6, {
+        lineGap: 2,
+        width: layout.descriptionWidth,
       })
-      .text(item.quantity.toFixed(2), page.left + width - 220, y + 5, {
+      .text(item.quantity.toFixed(2), layout.hoursX, y + 6, {
         align: 'right',
-        width: 50,
+        width: layout.hoursWidth,
       })
-      .text(
-        formatMoney(item.rate, invoice.currency),
-        page.left + width - 150,
-        y + 5,
-        {
-          align: 'right',
-          width: 60,
-        },
-      )
+      .text(formatMoney(item.rate, invoice.currency), layout.rateX, y + 6, {
+        align: 'right',
+        width: layout.rateWidth,
+      })
       .font('Helvetica-Bold')
       .text(
         formatMoney(item.amount, invoice.currency),
-        page.left + width - 92,
-        y + 5,
+        layout.amountX,
+        y + 6,
         {
           align: 'right',
-          width: 80,
+          width: layout.amountWidth,
         },
       );
 
@@ -350,7 +447,11 @@ function addInvoiceItems(document: PdfDocument, invoice: InvoiceDocument) {
 
 function addInvoiceTotals(document: PdfDocument, invoice: InvoiceDocument) {
   ensureSpace(document, 142);
-  const width = 235;
+  document.font('Helvetica-Bold').fontSize(13);
+  const totalWidth = document.widthOfString(
+    formatMoney(invoice.total, invoice.currency),
+  );
+  const width = clamp(totalWidth + 138, 250, contentWidth(document));
   const x = document.page.width - page.right - width;
   const rows = [
     ['Subtotal', formatMoney(invoice.subtotal, invoice.currency)],
@@ -368,12 +469,12 @@ function addInvoiceTotals(document: PdfDocument, invoice: InvoiceDocument) {
       .font('Helvetica')
       .fontSize(9)
       .fillColor(colors.muted)
-      .text(label ?? '', x, y, { width: 100 })
+      .text(label ?? '', x, y, { width: 105 })
       .font('Helvetica-Bold')
       .fillColor(colors.dark)
-      .text(value ?? '', x + 105, y, {
+      .text(value ?? '', x + 110, y, {
         align: 'right',
-        width: 130,
+        width: width - 110,
       });
     document.y = y + 22;
   }
@@ -388,9 +489,9 @@ function addInvoiceTotals(document: PdfDocument, invoice: InvoiceDocument) {
     .text('TOTAL', x + 12, totalY + 15, { width: 75 })
     .fontSize(13)
     .fillColor(colors.accent)
-    .text(formatMoney(invoice.total, invoice.currency), x + 88, totalY + 14, {
+    .text(formatMoney(invoice.total, invoice.currency), x + 90, totalY + 14, {
       align: 'right',
-      width: width - 100,
+      width: width - 102,
     });
   document.y = totalY + 58;
 }
