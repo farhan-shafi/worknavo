@@ -102,6 +102,13 @@ export const listWorkLogsQuerySchema = z
     }
   });
 
+export const rejectWorkLogApprovalSchema = z.object({
+  reason: z.string().trim().max(1000).optional(),
+});
+
 export type CreateWorkLogInput = z.infer<typeof createWorkLogSchema>;
 export type UpdateWorkLogInput = z.infer<typeof updateWorkLogSchema>;
 export type StartWorkLogTimerInput = z.infer<typeof startWorkLogTimerSchema>;
+export type RejectWorkLogApprovalInput = z.infer<
+  typeof rejectWorkLogApprovalSchema
+>;
