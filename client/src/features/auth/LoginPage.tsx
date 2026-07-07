@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import { Button } from '../../components/ui/button';
 import { ApiError } from '../../lib/api-client';
+import { trackEvent } from '../../lib/analytics';
 import { AuthShell } from './AuthShell';
 import { FormField } from './FormField';
 import { authApi } from './auth.api';
@@ -29,6 +30,7 @@ export function LoginPage() {
   const login = useMutation({
     mutationFn: authApi.login,
     onSuccess: async ({ message }) => {
+      trackEvent('login_completed');
       await queryClient.invalidateQueries({ queryKey: sessionQueryKey });
       toast.success(message);
       const destination =

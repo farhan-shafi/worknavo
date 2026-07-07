@@ -5,6 +5,7 @@ import type {
 } from '@clientflow/shared';
 
 import { downloadFile, request } from '../../lib/api-client';
+import { trackEvent } from '../../lib/analytics';
 import type {
   GenerateInvoiceValues,
   InvoiceFilters,
@@ -64,16 +65,25 @@ export const invoiceApi = {
     request<InvoiceListResponse>(`/invoices${queryString(filters)}`),
   get: (invoiceId: string) =>
     request<InvoiceResponse>(`/invoices/${invoiceId}`),
-  create: (values: InvoiceFormValues) =>
-    request<InvoiceResponse>('/invoices', {
+  create: async (values: InvoiceFormValues) => {
+    const response = await request<InvoiceResponse>('/invoices', {
       method: 'POST',
       body: JSON.stringify(manualInvoiceInput(values)),
-    }),
-  generateFromWorkLogs: (values: GenerateInvoiceValues) =>
-    request<InvoiceResponse>('/invoices/generate-from-worklogs', {
-      method: 'POST',
-      body: JSON.stringify(generatedInvoiceInput(values)),
-    }),
+    });
+    trackEvent('invoice_created', { source: 'manual' });
+    return response;
+  },
+  generateFromWorkLogs: async (values: GenerateInvoiceValues) => {
+    const response = await request<InvoiceResponse>(
+      '/invoices/generate-from-worklogs',
+      {
+        method: 'POST',
+        body: JSON.stringify(generatedInvoiceInput(values)),
+      },
+    );
+    trackEvent('invoice_created', { source: 'worklogs' });
+    return response;
+  },
   update: (invoiceId: string, values: InvoiceFormValues) =>
     request<InvoiceResponse>(`/invoices/${invoiceId}`, {
       method: 'PATCH',
@@ -87,8 +97,10 @@ export const invoiceApi = {
     request<MessageResponse>(`/invoices/${invoiceId}`, {
       method: 'DELETE',
     }),
-  downloadPdf: (invoiceId: string, fallbackFilename: string) =>
-    downloadFile(`/invoices/${invoiceId}/pdf`, fallbackFilename),
+  downloadPdf: async (invoiceId: string, fallbackFilename: string) => {
+    await downloadFile(`/invoices/${invoiceId}/pdf`, fallbackFilename);
+    trackEvent('invoice_downloaded');
+  },
   sendEmail: (invoiceId: string) =>
     request<MessageResponse>(`/invoices/${invoiceId}/send-email`, {
       method: 'POST',

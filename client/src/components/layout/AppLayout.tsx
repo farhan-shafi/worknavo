@@ -12,7 +12,6 @@ import {
   ChevronDown,
   CircleDollarSign,
   Clock3,
-  Compass,
   FileText,
   LayoutDashboard,
   LogOut,
@@ -27,15 +26,17 @@ import {
   UserCheck,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { authApi } from '../../features/auth/auth.api';
 import { sessionQueryKey, useAuth } from '../../features/auth/use-auth';
+import { identifyUser, resetAnalytics, trackEvent } from '../../lib/analytics';
 import { cn } from '../../lib/utils';
 import { request } from '../../lib/api-client';
 import { ConfirmDialog } from '../shared/ConfirmDialog';
+import { WorkNavoLogo } from '../shared/WorkNavoLogo';
 import { Avatar } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -147,16 +148,7 @@ const navigation: Array<{
 ];
 
 function WorkspaceMark() {
-  return (
-    <div className="inline-flex items-center gap-2.5">
-      <span className="bg-foreground grid size-10 place-items-center rounded-xl text-white shadow-md shadow-slate-900/10">
-        <Compass className="size-5" />
-      </span>
-      <span className="text-lg font-extrabold tracking-[-0.035em]">
-        Work<span className="text-primary">Navo</span>
-      </span>
-    </div>
-  );
+  return <WorkNavoLogo to="/app/dashboard" />;
 }
 
 export function AppLayout() {
@@ -164,6 +156,17 @@ export function AppLayout() {
   const auth = useAuth();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (auth.user && auth.organization && auth.membership) {
+      identifyUser({
+        user: auth.user,
+        organization: auth.organization,
+        membership: auth.membership,
+      });
+    }
+  }, [auth.membership, auth.organization, auth.user]);
+
   const notifications = useQuery({
     queryKey: ['notifications', auth.organization?.id],
     queryFn: () =>
@@ -201,6 +204,8 @@ export function AppLayout() {
   const logout = useMutation({
     mutationFn: authApi.logout,
     onSuccess: ({ message }) => {
+      trackEvent('logout_completed');
+      resetAnalytics();
       queryClient.setQueryData(sessionQueryKey, null);
       queryClient.clear();
       toast.success(message);

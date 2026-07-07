@@ -1,4 +1,5 @@
 import { zodResolver } from '@hookform/resolvers/zod';
+import { planIncludes, type SubscriptionPlan } from '@clientflow/shared';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Building2,
@@ -8,12 +9,14 @@ import {
   FileText,
   ListChecks,
   LoaderCircle,
+  LockKeyhole,
   Save,
+  Sparkles,
   UserRound,
 } from 'lucide-react';
 import { type ChangeEvent, type ReactNode } from 'react';
 import { useForm } from 'react-hook-form';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 
 import { PageHeader } from '../../components/shared/PageHeader';
@@ -25,9 +28,59 @@ import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { Textarea } from '../../components/ui/textarea';
 import { ApiError, request } from '../../lib/api-client';
+import { planProperties, trackEvent } from '../../lib/analytics';
 import { authApi } from '../auth/auth.api';
 import { sessionQueryKey, useAuth } from '../auth/use-auth';
+import { planApi } from '../billing/plan.api';
 import { settingsSchema, type SettingsFormValues } from './settings.schemas';
+
+const planCards: Array<{
+  plan: SubscriptionPlan;
+  name: string;
+  price: string;
+  description: string;
+  includes: string[];
+}> = [
+  {
+    plan: 'free',
+    name: 'Free',
+    price: '$0',
+    description: 'For solo testing and the core client-work workflow.',
+    includes: [
+      'Clients and projects',
+      'Timer and manual work logs',
+      'PDF reports',
+      'PDF invoices',
+    ],
+  },
+  {
+    plan: 'team',
+    name: 'Team',
+    price: '$8/user/mo',
+    description: 'For small teams that need role visibility and exports.',
+    includes: [
+      'Everything in Free',
+      'Role-aware team workspace',
+      'Project team visibility',
+      'Team analytics',
+      'CSV export',
+      'Work-log rules',
+    ],
+  },
+  {
+    plan: 'pro',
+    name: 'Pro',
+    price: '$15/user/mo',
+    description: 'For teams that need proof, expenses, and automation.',
+    includes: [
+      'Everything in Team',
+      'Expenses',
+      'GPS proof',
+      'Screenshot proof',
+      'Scheduled reports',
+    ],
+  },
+];
 
 export function SettingsPage() {
   const { organization, permissions, user } = useAuth();
@@ -35,6 +88,33 @@ export function SettingsPage() {
   const queryClient = useQueryClient();
   const upgradeFeature = searchParams.get('upgrade');
   const currentPlan = organization?.subscriptionPlan ?? 'free';
+  const workLogRulesEnabled = planIncludes(currentPlan, 'workLogRules');
+  const selectPlan = useMutation({
+    mutationFn: planApi.select,
+    onSuccess: ({ message, organization: updatedOrganization }) => {
+      trackEvent(
+        'plan_selected',
+        planProperties(updatedOrganization.subscriptionPlan, currentPlan),
+      );
+      queryClient.setQueryData(sessionQueryKey, (current: unknown) =>
+        current && typeof current === 'object'
+          ? {
+              ...current,
+              organization: updatedOrganization,
+            }
+          : current,
+      );
+      queryClient.invalidateQueries();
+      toast.success(message);
+    },
+    onError: (error) => {
+      toast.error(
+        error instanceof ApiError
+          ? error.message
+          : 'Unable to select that plan.',
+      );
+    },
+  });
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema),
     values: {
@@ -216,32 +296,89 @@ export function SettingsPage() {
       />
 
       <SettingsCard
-        description="Your current plan controls which advanced modules are available inside this workspace."
+        description="Your current plan controls which advanced modules are available inside this workspace. During beta, plan switching is manual and payment is not connected."
         icon={<CreditCard className="size-5" />}
         title="Plan"
       >
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <Badge variant={currentPlan === 'free' ? 'neutral' : 'primary'}>
-              {currentPlan.toUpperCase()}
-            </Badge>
-            <p className="text-muted mt-3 text-sm leading-6">
-              Free includes core clients, projects, timers, reports, and
-              invoices. Team adds team analytics. Pro adds proof tracking,
-              expenses, and scheduled reports.
-            </p>
-            {upgradeFeature ? (
-              <p className="text-primary mt-3 text-sm font-bold">
-                This feature is locked on your current plan.
+        <div className="space-y-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <Badge variant={currentPlan === 'free' ? 'neutral' : 'primary'}>
+                {currentPlan.toUpperCase()}
+              </Badge>
+              <p className="text-muted mt-3 text-sm leading-6">
+                Free includes core clients, projects, timers, reports, and
+                invoices. Team adds team analytics and exports. Pro adds
+                expenses, proof tracking, and scheduled reports.
               </p>
-            ) : null}
+              {upgradeFeature ? (
+                <p className="text-primary mt-3 flex items-center gap-2 text-sm font-bold">
+                  <LockKeyhole className="size-4" />
+                  This feature is locked on your current plan.
+                </p>
+              ) : null}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button asChild type="button" variant="secondary">
+                <Link to="/pricing">View public pricing</Link>
+              </Button>
+            </div>
           </div>
-          <a
-            className="text-primary text-sm font-extrabold hover:underline"
-            href="/pricing"
-          >
-            View pricing
-          </a>
+
+          <div className="grid gap-3 lg:grid-cols-3">
+            {planCards.map((plan) => (
+              <div
+                className={`rounded-2xl border bg-white p-4 ${
+                  currentPlan === plan.plan
+                    ? 'border-primary shadow-lg shadow-orange-900/10'
+                    : 'border-border'
+                }`}
+                key={plan.plan}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="font-extrabold">{plan.name}</p>
+                    <p className="text-muted mt-1 text-sm leading-6">
+                      {plan.description}
+                    </p>
+                  </div>
+                  <Badge variant={plan.plan === 'team' ? 'primary' : 'neutral'}>
+                    {plan.price}
+                  </Badge>
+                </div>
+                <div className="mt-4 space-y-2">
+                  {plan.includes.map((item) => (
+                    <div className="flex gap-2 text-xs" key={item}>
+                      <span className="text-success mt-0.5">✓</span>
+                      <span className="text-muted font-semibold">{item}</span>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  className="mt-4 w-full"
+                  disabled={
+                    selectPlan.isPending ||
+                    !permissions.includes('settings.manage') ||
+                    currentPlan === plan.plan
+                  }
+                  onClick={() => selectPlan.mutate(plan.plan)}
+                  type="button"
+                  variant={plan.plan === 'team' ? 'default' : 'secondary'}
+                >
+                  {selectPlan.isPending ? (
+                    <LoaderCircle className="size-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="size-4" />
+                  )}
+                  {currentPlan === plan.plan
+                    ? 'Current plan'
+                    : permissions.includes('settings.manage')
+                      ? `Select ${plan.name}`
+                      : 'Owner/admin only'}
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
       </SettingsCard>
 
@@ -366,13 +503,22 @@ export function SettingsPage() {
           icon={<ListChecks className="size-5" />}
           title="Work log rules"
         >
+          {!workLogRulesEnabled ? (
+            <div className="border-primary/20 bg-primary-soft/20 text-primary mb-5 rounded-2xl border p-4 text-sm font-bold">
+              Team plan is required to change required fields, lock windows,
+              and invoice rounding.
+            </div>
+          ) : null}
           <div className="grid gap-5 sm:grid-cols-2">
             <FormControl
               error={fieldError('workLogRequireCategory')}
               label="Require category"
             >
               <Select
-                disabled={!permissions.includes('settings.manage')}
+                disabled={
+                  !permissions.includes('settings.manage') ||
+                  !workLogRulesEnabled
+                }
                 {...form.register('workLogRequireCategory')}
               >
                 <option value="false">No — category is optional</option>
@@ -384,7 +530,10 @@ export function SettingsPage() {
               label="Require notes"
             >
               <Select
-                disabled={!permissions.includes('settings.manage')}
+                disabled={
+                  !permissions.includes('settings.manage') ||
+                  !workLogRulesEnabled
+                }
                 {...form.register('workLogRequireDescription')}
               >
                 <option value="false">No — notes are optional</option>
@@ -396,7 +545,10 @@ export function SettingsPage() {
               label="Minimum notes length"
             >
               <Input
-                disabled={!permissions.includes('settings.manage')}
+                disabled={
+                  !permissions.includes('settings.manage') ||
+                  !workLogRulesEnabled
+                }
                 inputMode="numeric"
                 min="0"
                 placeholder="0"
@@ -413,7 +565,10 @@ export function SettingsPage() {
               label="Lock member edits after"
             >
               <Input
-                disabled={!permissions.includes('settings.manage')}
+                disabled={
+                  !permissions.includes('settings.manage') ||
+                  !workLogRulesEnabled
+                }
                 inputMode="numeric"
                 min="1"
                 placeholder="Blank = never lock"
@@ -430,7 +585,10 @@ export function SettingsPage() {
               label="Invoice time rounding"
             >
               <Select
-                disabled={!permissions.includes('settings.manage')}
+                disabled={
+                  !permissions.includes('settings.manage') ||
+                  !workLogRulesEnabled
+                }
                 {...form.register('invoiceTimeRoundingMinutes')}
               >
                 <option value="0">No rounding</option>

@@ -481,7 +481,7 @@ export function DashboardPage() {
             <div>
               <h2 className="font-extrabold">Set up your workflow</h2>
               <p className="text-muted mt-1 text-xs">
-                Client first, paid invoice last.
+                Client first, clean invoice last.
               </p>
             </div>
             <Badge variant="primary">{completedSteps} of 4 complete</Badge>

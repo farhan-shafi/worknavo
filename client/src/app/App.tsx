@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 
+import { AnalyticsRouteTracker } from '../components/shared/AnalyticsRouteTracker';
 import { DashboardLoadingSkeleton } from '../components/shared/LoadingSkeleton';
 import { ProtectedRoute } from '../features/auth/ProtectedRoute';
 import { PlanGate } from '../features/billing/PlanGate';
@@ -138,8 +139,10 @@ const CategoriesPage = lazy(() =>
 
 export function App() {
   return (
-    <Suspense fallback={<DashboardLoadingSkeleton />}>
-      <Routes>
+    <>
+      <AnalyticsRouteTracker />
+      <Suspense fallback={<DashboardLoadingSkeleton />}>
+        <Routes>
         <Route element={<LandingPage />} path="/" />
         <Route element={<FeaturesPage />} path="/features" />
         <Route element={<PricingPage />} path="/pricing" />
@@ -194,7 +197,8 @@ export function App() {
         </Route>
 
         <Route element={<Navigate replace to="/" />} path="*" />
-      </Routes>
-    </Suspense>
+        </Routes>
+      </Suspense>
+    </>
   );
 }

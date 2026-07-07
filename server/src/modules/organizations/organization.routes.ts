@@ -6,6 +6,7 @@ import {
   currentOrganization,
   listOrganizations,
   updateOrganization,
+  updateOrganizationPlan,
 } from './organization.controller.js';
 
 export const organizationRouter = Router();
@@ -15,3 +16,4 @@ organizationRouter
   .route('/current')
   .get(currentOrganization)
   .patch(updateOrganization);
+organizationRouter.patch('/current/plan', updateOrganizationPlan);

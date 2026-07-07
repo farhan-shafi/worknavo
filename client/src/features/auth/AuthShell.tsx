@@ -1,6 +1,7 @@
-import { CheckCircle2, Compass, ShieldCheck, Sparkles } from 'lucide-react';
+import { CheckCircle2, ShieldCheck, Sparkles } from 'lucide-react';
 import type { PropsWithChildren, ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+
+import { WorkNavoLogo } from '../../components/shared/WorkNavoLogo';
 
 interface AuthShellProps extends PropsWithChildren {
   eyebrow: string;
@@ -25,14 +26,7 @@ export function AuthShell({
   return (
     <main className="bg-background grid min-h-screen lg:grid-cols-[0.9fr_1.1fr]">
       <section className="flex min-h-screen flex-col px-5 py-6 sm:px-10 lg:px-14">
-        <Link className="inline-flex w-fit items-center gap-2.5" to="/">
-          <span className="bg-foreground grid size-10 place-items-center rounded-xl text-white shadow-lg">
-            <Compass className="size-5" />
-          </span>
-          <span className="text-lg font-extrabold tracking-[-0.035em]">
-            Work<span className="text-primary">Navo</span>
-          </span>
-        </Link>
+        <WorkNavoLogo className="w-fit" />
 
         <div className="mx-auto flex w-full max-w-md flex-1 flex-col justify-center py-12">
           <p className="text-primary text-xs font-extrabold tracking-[0.18em] uppercase">

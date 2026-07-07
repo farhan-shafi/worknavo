@@ -5,6 +5,7 @@ import { PageHeader } from '../../components/shared/PageHeader';
 import { StatCard } from '../../components/shared/StatCard';
 import { Button } from '../../components/ui/button';
 import { downloadFile, request } from '../../lib/api-client';
+import { trackEvent } from '../../lib/analytics';
 import { useAuth } from '../auth/use-auth';
 
 interface TeamAnalytics {
@@ -55,7 +56,9 @@ export function AnalyticsPage() {
         actions={
           <Button
             onClick={() =>
-              downloadFile('/analytics/export.csv', 'team-time-export.csv')
+              downloadFile('/analytics/export.csv', 'team-time-export.csv').then(
+                () => trackEvent('analytics_csv_downloaded'),
+              )
             }
             variant="outline"
           >

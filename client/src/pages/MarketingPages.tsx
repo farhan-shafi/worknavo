@@ -7,7 +7,6 @@ import {
   Clock3,
   FileText,
   Globe2,
-  MapPin,
   ReceiptText,
   ShieldCheck,
   UsersRound,
@@ -29,65 +28,130 @@ const navLinks = [
 
 const features: Array<{
   icon: LucideIcon;
-  title: string;
-  description: string;
+  group: string;
   plan: 'Free' | 'Team' | 'Pro';
+  items: string[];
 }> = [
   {
     icon: Clock3,
-    title: 'Timers and manual logs',
-    description:
-      'Track live work or add clean manual entries connected to clients, projects, categories, and billable status.',
+    group: 'Time tracking',
     plan: 'Free',
+    items: [
+      'Live timer and manual work logs',
+      'Billable and non-billable time',
+      'Project, client, and category context',
+      'Personal recent work history',
+    ],
   },
   {
-    icon: FileText,
-    title: 'PDF reports and invoices',
-    description:
-      'Generate client-facing summaries and invoices from the same work log data.',
+    icon: BriefcaseBusiness,
+    group: 'Projects',
     plan: 'Free',
+    items: [
+      'Clients, projects, and categories',
+      'Project assignments',
+      'Project team views',
+      'Budget and work context',
+    ],
   },
   {
     icon: UsersRound,
-    title: 'Role-aware workspaces',
-    description:
-      'Give members, project managers, finance users, admins, and owners the right workspace for their job.',
+    group: 'Team control',
     plan: 'Team',
+    items: [
+      'Owner, Admin, Project Manager, Finance, Member, Viewer',
+      'Scoped team visibility',
+      'Project manager routing',
+      'Work-log rules and lock windows',
+    ],
   },
   {
     icon: BarChart3,
-    title: 'Team analytics and CSV export',
-    description:
-      'Review utilization, member hours, project capacity, billable trends, and export team time data.',
+    group: 'Reports',
     plan: 'Team',
+    items: [
+      'Team analytics',
+      'CSV export',
+      'Utilization views',
+      'PDF client reports',
+    ],
+  },
+  {
+    icon: FileText,
+    group: 'Billing records',
+    plan: 'Free',
+    items: [
+      'PDF invoices',
+      'Billable work-log selection',
+      'Invoice status tracking',
+      'Downloadable records',
+    ],
   },
   {
     icon: ReceiptText,
-    title: 'Expenses',
-    description:
-      'Track reimbursable and billable expenses, then include them in generated invoices.',
+    group: 'Expenses',
     plan: 'Pro',
+    items: [
+      'Billable expenses',
+      'Receipt attachments',
+      'Invoice inclusion',
+      'Client/project expense filters',
+    ],
   },
   {
     icon: Camera,
-    title: 'Screenshot proof',
-    description:
-      'Capture privacy-first manual screenshot proof tied to active timers. No silent screenshots.',
+    group: 'Proof',
     plan: 'Pro',
-  },
-  {
-    icon: MapPin,
-    title: 'GPS proof',
-    description:
-      'Optionally save start/stop browser location proof without any background tracking.',
-    plan: 'Pro',
+    items: [
+      'GPS start/stop proof',
+      'Screenshot proof',
+      'Privacy-first visibility',
+      'No silent background capture',
+    ],
   },
   {
     icon: Globe2,
-    title: 'Scheduled email reports',
-    description:
-      'Send daily, weekly, or monthly report summaries using your configured email provider.',
+    group: 'Automation and security',
     plan: 'Pro',
+    items: [
+      'Scheduled email reports',
+      'httpOnly sessions',
+      'Permission-scoped API data',
+      'Audit trail',
+    ],
+  },
+];
+
+const proofPrinciples = [
+  'GPS is captured only when a timer starts or stops.',
+  'Screenshot proof requires visible user action and an active timer.',
+  'Proof data is for accountability, not hidden surveillance.',
+];
+
+const featureComparison = [
+  {
+    feature: 'Timer, manual logs, clients, projects, PDF reports, invoices',
+    free: true,
+    team: true,
+    pro: true,
+  },
+  {
+    feature: 'Team roles, project teams, analytics, CSV export',
+    free: false,
+    team: true,
+    pro: true,
+  },
+  {
+    feature: 'Work-log required fields, lock windows, invoice rounding',
+    free: false,
+    team: true,
+    pro: true,
+  },
+  {
+    feature: 'Expenses, GPS proof, screenshot proof, scheduled reports',
+    free: false,
+    team: false,
+    pro: true,
   },
 ];
 
@@ -101,11 +165,12 @@ const pricingPlans = [
     included: [
       'Clients and projects',
       'Timer and manual work logs',
-      'Basic reports',
+      'PDF reports',
       'PDF invoices',
       'Profile and workspace settings',
     ],
     locked: [
+      'Work-log rules',
       'Team analytics',
       'Expenses',
       'GPS and screenshot proof',
@@ -117,7 +182,7 @@ const pricingPlans = [
     price: '$8',
     suffix: 'user/month',
     description: 'For small teams that need visibility and exports.',
-    cta: 'Choose Team',
+    cta: 'Start Team workspace',
     highlighted: true,
     included: [
       'Everything in Free',
@@ -134,7 +199,7 @@ const pricingPlans = [
     price: '$15',
     suffix: 'user/month',
     description: 'For teams that need proof, automation, and billing depth.',
-    cta: 'Choose Pro',
+    cta: 'Start Pro workspace',
     highlighted: false,
     included: [
       'Everything in Team',
@@ -142,7 +207,7 @@ const pricingPlans = [
       'GPS proof',
       'Screenshot proof',
       'Scheduled email reports',
-      'Advanced billing workflow',
+      'Advanced invoice workflow',
     ],
     locked: [],
   },
@@ -272,21 +337,91 @@ export function FeaturesPage() {
       />
       <section className="px-5 pb-24 lg:px-8">
         <div className="mx-auto grid max-w-7xl gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {features.map(({ description, icon: Icon, plan, title }) => (
-            <Card className="p-6" key={title}>
+          {features.map(({ group, icon: Icon, items, plan }) => (
+            <Card className="p-6" key={group}>
               <span className="bg-primary-soft/45 text-primary grid size-12 place-items-center rounded-2xl">
                 <Icon className="size-5" />
               </span>
               <div className="mt-6 flex items-center justify-between gap-3">
-                <h2 className="font-extrabold">{title}</h2>
+                <h2 className="font-extrabold">{group}</h2>
                 <span className="border-border rounded-full border px-2 py-1 text-[10px] font-extrabold">
                   {plan}
                 </span>
               </div>
-              <p className="text-muted mt-3 text-sm leading-6">{description}</p>
+              <div className="mt-5 space-y-3">
+                {items.map((item) => (
+                  <div className="flex gap-2 text-sm" key={item}>
+                    <Check className="text-success mt-0.5 size-4 shrink-0" />
+                    <span className="text-muted">{item}</span>
+                  </div>
+                ))}
+              </div>
             </Card>
           ))}
         </div>
+      </section>
+
+      <section className="border-border border-y bg-white px-5 py-20 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.85fr_1.15fr] lg:items-start">
+          <div>
+            <p className="text-primary text-xs font-extrabold tracking-[0.18em] uppercase">
+              Plan access
+            </p>
+            <h2 className="mt-4 text-3xl font-extrabold tracking-[-0.04em]">
+              Free starts the workflow. Team and Pro unlock the operating layer.
+            </h2>
+            <p className="text-muted mt-5 leading-7">
+              During beta, workspace owners can switch plans directly inside
+              Settings to test what each tier unlocks before payment is added.
+            </p>
+          </div>
+          <Card className="overflow-hidden">
+            <div className="border-border text-muted grid grid-cols-[1.6fr_0.55fr_0.55fr_0.55fr] border-b px-5 py-3 text-xs font-extrabold">
+              <span>Feature</span>
+              <span>Free</span>
+              <span>Team</span>
+              <span>Pro</span>
+            </div>
+            <div className="divide-border divide-y">
+              {featureComparison.map((row) => (
+                <div
+                  className="grid grid-cols-[1.6fr_0.55fr_0.55fr_0.55fr] gap-3 px-5 py-4 text-sm"
+                  key={row.feature}
+                >
+                  <span className="font-semibold">{row.feature}</span>
+                  {(['free', 'team', 'pro'] as const).map((plan) => (
+                    <span key={plan}>
+                      {row[plan] ? (
+                        <Check className="text-success size-4" />
+                      ) : (
+                        <X className="text-muted size-4" />
+                      )}
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
+      </section>
+
+      <section className="px-5 py-20 lg:px-8">
+        <Card className="bg-foreground mx-auto max-w-5xl p-8 text-white sm:p-10">
+          <p className="text-primary-soft text-xs font-extrabold tracking-[0.18em] uppercase">
+            Proof without spying
+          </p>
+          <h2 className="mt-4 text-3xl font-extrabold tracking-[-0.04em]">
+            Proof features are built to be visible and consent-led.
+          </h2>
+          <div className="mt-8 grid gap-4 md:grid-cols-3">
+            {proofPrinciples.map((item) => (
+              <div className="flex gap-3 text-sm leading-6" key={item}>
+                <ShieldCheck className="text-primary-soft mt-0.5 size-5 shrink-0" />
+                <span className="text-white/70">{item}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
       </section>
     </MarketingShell>
   );
@@ -296,7 +431,7 @@ export function PricingPage() {
   return (
     <MarketingShell>
       <PageHero
-        description="Start with the free workflow, then upgrade when team visibility, proof tracking, expenses, and automation become necessary."
+        description="Start with the free workflow, then select Team or Pro inside Settings when you want to test locked team, proof, expense, and automation features."
         eyebrow="Pricing"
         title="Three simple plans for client-facing teams."
       />
@@ -355,6 +490,11 @@ export function PricingPage() {
             </Card>
           ))}
         </div>
+        <p className="text-muted mx-auto mt-8 max-w-3xl text-center text-sm leading-6">
+          Beta note: payments are not connected yet. Workspace owners can switch
+          plans in Settings so you can test feature restrictions before the
+          payment system is added.
+        </p>
       </section>
     </MarketingShell>
   );

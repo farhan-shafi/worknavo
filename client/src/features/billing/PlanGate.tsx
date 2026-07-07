@@ -3,9 +3,10 @@ import {
   planIncludes,
   type PlanFeature,
 } from '@clientflow/shared';
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 
+import { lockedFeatureProperties, trackEvent } from '../../lib/analytics';
 import { useAuth } from '../auth/use-auth';
 
 export function PlanGate({
@@ -16,12 +17,23 @@ export function PlanGate({
   feature: PlanFeature;
 }) {
   const { organization } = useAuth();
+  const requiredPlan = planFeatureMinimumPlan[feature];
+  const locked = !planIncludes(organization?.subscriptionPlan, feature);
 
-  if (!planIncludes(organization?.subscriptionPlan, feature)) {
+  useEffect(() => {
+    if (locked) {
+      trackEvent(
+        'feature_locked_clicked',
+        lockedFeatureProperties(feature, requiredPlan),
+      );
+    }
+  }, [feature, locked, requiredPlan]);
+
+  if (locked) {
     return (
       <Navigate
         replace
-        to={`/app/settings?upgrade=${feature}&requiredPlan=${planFeatureMinimumPlan[feature]}`}
+        to={`/app/settings?upgrade=${feature}&requiredPlan=${requiredPlan}`}
       />
     );
   }

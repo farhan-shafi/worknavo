@@ -5,6 +5,7 @@ import type {
 } from '@clientflow/shared';
 
 import { downloadFile, request } from '../../lib/api-client';
+import { trackEvent } from '../../lib/analytics';
 import type { ReportFilters, ReportFormValues } from './report.schemas';
 import { parseHighlightsInput } from './report.utils';
 
@@ -46,11 +47,14 @@ export const reportApi = {
     request<WeeklyReportListResponse>(`/reports${queryString(filters)}`),
   get: (reportId: string) =>
     request<WeeklyReportResponse>(`/reports/${reportId}`),
-  create: (values: ReportFormValues) =>
-    request<WeeklyReportResponse>('/reports', {
+  create: async (values: ReportFormValues) => {
+    const response = await request<WeeklyReportResponse>('/reports', {
       method: 'POST',
       body: JSON.stringify(reportInput(values)),
-    }),
+    });
+    trackEvent('report_created');
+    return response;
+  },
   update: (reportId: string, values: ReportFormValues) =>
     request<WeeklyReportResponse>(`/reports/${reportId}`, {
       method: 'PATCH',
@@ -60,8 +64,10 @@ export const reportApi = {
     request<MessageResponse>(`/reports/${reportId}`, {
       method: 'DELETE',
     }),
-  downloadPdf: (reportId: string, fallbackFilename: string) =>
-    downloadFile(`/reports/${reportId}/pdf`, fallbackFilename),
+  downloadPdf: async (reportId: string, fallbackFilename: string) => {
+    await downloadFile(`/reports/${reportId}/pdf`, fallbackFilename);
+    trackEvent('report_downloaded');
+  },
   sendEmail: (reportId: string) =>
     request<MessageResponse>(`/reports/${reportId}/send-email`, {
       method: 'POST',

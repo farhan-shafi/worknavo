@@ -26,6 +26,7 @@ import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { ApiError, request } from '../../lib/api-client';
+import { trackEvent } from '../../lib/analytics';
 import { clientQueryKeys, useClients } from '../clients/client.queries';
 import { useProjects } from '../projects/project.queries';
 import { useAuth } from '../auth/use-auth';
@@ -185,7 +186,12 @@ export function WorkLogTimerPanel({
         ...(locationProof ? { locationProof } : {}),
       });
     },
-    onSuccess: ({ message }) => {
+    onSuccess: ({ message, workLog }) => {
+      trackEvent('timer_started', {
+        billable: workLog.billable,
+        has_category: Boolean(workLog.categoryId),
+        has_gps_proof: Boolean(workLog.timerStartLocation),
+      });
       void queryClient.invalidateQueries({ queryKey: workLogQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: clientQueryKeys.all });
       toast.success(message);
@@ -218,7 +224,12 @@ export function WorkLogTimerPanel({
         ...(locationProof ? { locationProof } : {}),
       });
     },
-    onSuccess: ({ message }) => {
+    onSuccess: ({ message, workLog }) => {
+      trackEvent('timer_stopped', {
+        billable: workLog.billable,
+        duration_hours: workLog.durationHours,
+        has_gps_proof: Boolean(workLog.timerStopLocation),
+      });
       void queryClient.invalidateQueries({ queryKey: workLogQueryKeys.all });
       void queryClient.invalidateQueries({ queryKey: clientQueryKeys.all });
       toast.success(message);

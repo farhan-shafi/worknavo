@@ -19,6 +19,7 @@ export type WorkspaceType = 'solo' | 'company';
 export type SubscriptionPlan = 'free' | 'team' | 'pro';
 export type PlanFeature =
   | 'teamAnalytics'
+  | 'workLogRules'
   | 'expenses'
   | 'scheduledReports'
   | 'proofTracking';
@@ -31,6 +32,7 @@ export const subscriptionPlanRank: Record<SubscriptionPlan, number> = {
 
 export const planFeatureMinimumPlan: Record<PlanFeature, SubscriptionPlan> = {
   teamAnalytics: 'team',
+  workLogRules: 'team',
   expenses: 'pro',
   scheduledReports: 'pro',
   proofTracking: 'pro',
@@ -161,6 +163,11 @@ export interface SessionResponse {
 
 export interface MessageResponse {
   message: string;
+}
+
+export interface PlanSelectionResponse {
+  message: string;
+  organization: Organization;
 }
 
 export type ClientStatus = 'active' | 'inactive' | 'archived';

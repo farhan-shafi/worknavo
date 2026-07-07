@@ -1,6 +1,7 @@
 import type { MembershipRole, Permission } from '@clientflow/shared';
 
 import { request } from '../../lib/api-client';
+import { trackEvent } from '../../lib/analytics';
 
 export interface TeamMember {
   id: string;
@@ -44,7 +45,7 @@ export const teamApi = {
     request<{ message: string }>(`/invitations/${invitationId}`, {
       method: 'DELETE',
     }),
-  invite: (payload: {
+  invite: async (payload: {
     email: string;
     name?: string;
     role: Exclude<MembershipRole, 'owner'>;
@@ -52,15 +53,22 @@ export const teamApi = {
     mode: 'email' | 'admin_created';
     projectIds: string[];
     permissionOverrides: { allow: Permission[]; deny: Permission[] };
-  }) =>
-    request<{
+  }) => {
+    const response = await request<{
       message: string;
       temporaryPassword?: string;
       invitation?: { acceptUrl: string };
     }>('/members/invite', {
       method: 'POST',
       body: JSON.stringify(payload),
-    }),
+    });
+    trackEvent('member_invited', {
+      mode: payload.mode,
+      role: payload.role,
+      project_count: payload.projectIds.length,
+    });
+    return response;
+  },
   update: (
     memberId: string,
     payload: {

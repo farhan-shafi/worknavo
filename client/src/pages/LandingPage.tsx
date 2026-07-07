@@ -5,7 +5,6 @@ import {
   Check,
   CircleDollarSign,
   Clock3,
-  Compass,
   FileText,
   Layers3,
   ShieldCheck,
@@ -19,6 +18,7 @@ import { Link } from 'react-router-dom';
 
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { WorkNavoLogo } from '../components/shared/WorkNavoLogo';
 import { cn } from '../lib/utils';
 
 const platformFeatures: Array<{
@@ -36,7 +36,7 @@ const platformFeatures: Array<{
     icon: BriefcaseBusiness,
     title: 'Projects, clients, categories',
     description:
-      'Connect every hour to a client, project, category, rate, and billing context.',
+      'Connect every hour to a client, project, category, rate, and invoice context.',
   },
   {
     icon: UsersRound,
@@ -48,7 +48,7 @@ const platformFeatures: Array<{
     icon: FileText,
     title: 'Reports and invoices',
     description:
-      'Turn billable work into client summaries, PDFs, emails, and invoices.',
+      'Turn billable work into client summaries, downloadable PDFs, and invoices.',
   },
   {
     icon: BarChart3,
@@ -65,17 +65,76 @@ const platformFeatures: Array<{
 ];
 
 const roleRows = [
-  ['Owner/Admin', 'Full workspace control', 'Team, settings, billing, audit'],
+  ['Owner/Admin', 'Full workspace control', 'Team, settings, plans, audit'],
   ['Project Manager', 'Managed projects only', 'Project team, logs, reports'],
-  ['Finance', 'Billing workspace', 'Invoices, billable time, revenue'],
+  ['Finance', 'Invoice workspace', 'Invoices, billable time, revenue'],
   ['Member', 'Personal workspace', 'Own timer, logs, assigned projects'],
 ];
 
 const useCases = [
   'Freelancers growing into teams',
-  'Design and dev agencies',
+  'Small agencies',
   'Consultants billing by the hour',
-  'Finance teams preparing invoices',
+  'Design and dev studios',
+  'Accounting and service teams',
+];
+
+const workflowSteps = [
+  [
+    '01',
+    'Track time',
+    'Start a timer or add clean manual entries against the right client, project, category, and billable status.',
+  ],
+  [
+    '02',
+    'Review team work',
+    'Owners see the full workspace, project managers see managed projects, and members stay focused on their own logs.',
+  ],
+  [
+    '03',
+    'Generate reports',
+    'Turn the same time data into client-facing PDF summaries, internal analytics, and exportable team views.',
+  ],
+  [
+    '04',
+    'Send invoices',
+    'Convert billable logs and approved expenses into cleaner invoices without rebuilding the same data twice.',
+  ],
+];
+
+const proofRows = [
+  'GPS is captured only when a timer starts or stops.',
+  'Screenshot proof requires visible user permission and an active timer.',
+  'No silent background monitoring or hidden employee surveillance.',
+];
+
+const whyRows = [
+  'Simpler than enterprise tools that need weeks of setup.',
+  'Stronger than basic invoice apps that lose the team-work context.',
+  'Focused on billable service work: people, projects, reports, and invoices.',
+];
+
+const faqs = [
+  [
+    'Is WorkNavo free?',
+    'Yes. The Free plan covers the core solo workflow: clients, projects, timer/manual logs, PDF reports, and PDF invoices.',
+  ],
+  [
+    'Can I invite team members?',
+    'Yes. Team workspaces support roles, project assignments, scoped visibility, and project-team views.',
+  ],
+  [
+    'Can project managers see everyone?',
+    'No. Project managers are scoped to projects they manage. They do not get the full Team page by default.',
+  ],
+  [
+    'Are screenshots private?',
+    'Proof tracking is designed to be explicit and visible. It is tied to active work, not silent background capture.',
+  ],
+  [
+    'Can I export invoices and reports?',
+    'Yes. Client-facing reports and invoices are downloadable as PDFs, and team analytics can export CSV on paid plans.',
+  ],
 ];
 
 const sampleActivity = [
@@ -96,16 +155,7 @@ const dashboardStats: Array<{
 ];
 
 export function Brand() {
-  return (
-    <Link className="inline-flex items-center gap-2.5" to="/">
-      <span className="bg-foreground shadow-foreground/15 grid size-10 place-items-center rounded-xl text-white shadow-lg">
-        <Compass className="size-5" />
-      </span>
-      <span className="text-lg font-extrabold tracking-[-0.035em]">
-        Work<span className="text-primary">Navo</span>
-      </span>
-    </Link>
-  );
+  return <WorkNavoLogo />;
 }
 
 function ProductPreview() {
@@ -151,11 +201,11 @@ function ProductPreview() {
                   Team operations
                 </p>
                 <h2 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl">
-                  Know what was worked, billed, and delivered.
+                  Know what was worked, reviewed, and invoiced.
                 </h2>
                 <p className="text-muted mt-1 text-sm">
                   A single dashboard for time, projects, people, and client
-                  billing.
+                  invoicing.
                 </p>
               </div>
               <div className="border-success/15 bg-success/8 text-success inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold">
@@ -306,15 +356,16 @@ export function LandingPage() {
           <div className="relative mx-auto max-w-4xl text-center">
             <div className="border-primary/15 text-primary mx-auto mb-7 inline-flex items-center gap-2 rounded-full border bg-white px-4 py-2 text-xs font-bold shadow-sm">
               <Sparkles className="size-3.5" />
-              Time tracking, teams, reports, and billing
+              Time tracking, teams, proof, reports, and invoices
             </div>
             <h1 className="text-5xl leading-[0.98] font-extrabold tracking-[-0.055em] text-balance sm:text-6xl lg:text-7xl">
-              Run client work from timer to paid invoice.
+              Track team time, prove work, send cleaner invoices.
             </h1>
             <p className="text-muted mx-auto mt-8 max-w-2xl text-base leading-7 text-balance sm:text-lg">
-              WorkNavo helps freelancers and small service teams track work,
-              control role visibility, review project activity, generate
-              reports, and invoice without rebuilding the same data twice.
+              WorkNavo helps freelancers and small service teams capture
+              billable work, control role visibility, review project activity,
+              generate reports, and send invoices without rebuilding the same
+              data twice.
             </p>
             <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
               <Button asChild size="lg">
@@ -329,7 +380,7 @@ export function LandingPage() {
             <div className="text-muted mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-bold">
               <span>Solo or company workspaces</span>
               <span>Role-based access</span>
-              <span>PDF reports and invoices</span>
+              <span>Downloadable reports and invoices</span>
             </div>
           </div>
           <ProductPreview />
@@ -341,9 +392,9 @@ export function LandingPage() {
         >
           <div className="mx-auto max-w-7xl">
             <SectionIntro
-              description="A Clockify-style feature set shaped for client-facing service work: simple time capture, scoped teams, billing, reporting, and operational analytics."
+              description="A buyer-ready workflow for client-facing service work: simple time capture, scoped teams, proof, reporting, and invoicing."
               eyebrow="Feature platform"
-              title="Everything your team needs before the invoice."
+              title="Everything your team needs before sending the invoice."
             />
             <div className="mt-14 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {platformFeatures.map(({ description, icon: Icon, title }) => (
@@ -355,6 +406,29 @@ export function LandingPage() {
                     <Icon className="size-5" />
                   </span>
                   <h3 className="mt-7 text-lg font-extrabold">{title}</h3>
+                  <p className="text-muted mt-3 text-sm leading-6">
+                    {description}
+                  </p>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="px-5 py-24 lg:px-8" id="workflow">
+          <div className="mx-auto max-w-7xl">
+            <SectionIntro
+              description="WorkNavo keeps the same record moving from timer to internal review, client report, and invoice."
+              eyebrow="How it works"
+              title="One flow from work started to invoice sent."
+            />
+            <div className="mt-14 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+              {workflowSteps.map(([step, title, description]) => (
+                <Card className="p-6" key={step}>
+                  <span className="text-primary text-sm font-extrabold">
+                    {step}
+                  </span>
+                  <h3 className="mt-5 text-lg font-extrabold">{title}</h3>
                   <p className="text-muted mt-3 text-sm leading-6">
                     {description}
                   </p>
@@ -409,6 +483,79 @@ export function LandingPage() {
                 ))}
               </div>
             </Card>
+          </div>
+        </section>
+
+        <section className="border-border border-y bg-white px-5 py-24 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-5 lg:grid-cols-3">
+            <Card className="p-7 lg:col-span-1">
+              <p className="text-primary text-xs font-extrabold tracking-[0.18em] uppercase">
+                Built for
+              </p>
+              <h2 className="mt-4 text-3xl font-extrabold tracking-[-0.04em]">
+                Service teams that bill by time.
+              </h2>
+              <div className="mt-7 flex flex-wrap gap-3">
+                {useCases.map((item) => (
+                  <span
+                    className="border-border rounded-full border bg-white px-4 py-2 text-xs font-bold"
+                    key={item}
+                  >
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </Card>
+            <Card className="bg-foreground p-7 text-white lg:col-span-1">
+              <p className="text-primary-soft text-xs font-extrabold tracking-[0.18em] uppercase">
+                Proof without spying
+              </p>
+              <h2 className="mt-4 text-3xl font-extrabold tracking-[-0.04em]">
+                Accountability should feel clear, not creepy.
+              </h2>
+              <div className="mt-7 space-y-4">
+                {proofRows.map((item) => (
+                  <div className="flex gap-3 text-sm leading-6" key={item}>
+                    <Check className="text-primary-soft mt-0.5 size-4 shrink-0" />
+                    <span className="text-white/70">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+            <Card className="p-7 lg:col-span-1">
+              <p className="text-primary text-xs font-extrabold tracking-[0.18em] uppercase">
+                Why WorkNavo
+              </p>
+              <h2 className="mt-4 text-3xl font-extrabold tracking-[-0.04em]">
+                Less admin mess between delivery and invoices.
+              </h2>
+              <div className="mt-7 space-y-4">
+                {whyRows.map((item) => (
+                  <div className="flex gap-3 text-sm leading-6" key={item}>
+                    <Check className="text-success mt-0.5 size-4 shrink-0" />
+                    <span className="text-muted">{item}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        </section>
+
+        <section className="px-5 py-24 lg:px-8">
+          <div className="mx-auto max-w-5xl">
+            <SectionIntro
+              description="Straight answers for teams testing WorkNavo before inviting clients or team members."
+              eyebrow="FAQ"
+              title="Questions before you start."
+            />
+            <div className="mt-12 grid gap-4 md:grid-cols-2">
+              {faqs.map(([question, answer]) => (
+                <Card className="p-6" key={question}>
+                  <h3 className="font-extrabold">{question}</h3>
+                  <p className="text-muted mt-3 text-sm leading-6">{answer}</p>
+                </Card>
+              ))}
+            </div>
           </div>
         </section>
 

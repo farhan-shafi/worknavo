@@ -9,6 +9,9 @@ public portfolio deployment.
 - API: Render or Railway
 - Database: MongoDB Atlas
 - Email: Resend direct API for testing/production, or SMTP as a fallback
+- Product analytics: PostHog
+- Payments: not connected yet. During beta, owners can switch Free, Team, and
+  Pro manually from Settings to test feature locks.
 
 ## Deploy the API
 
@@ -52,7 +55,15 @@ does not need `SMTP_HOST`, `SMTP_USER`, or `SMTP_PASS`.
 
 ```env
 VITE_API_URL=https://your-worknavo-api.example/api
+VITE_POSTHOG_KEY=phc_your_posthog_project_key
+VITE_POSTHOG_HOST=https://us.i.posthog.com
+VITE_POSTHOG_DISABLED=false
 ```
+
+For Railway, add these variables to the frontend service's Variables tab, then
+deploy the staged changes. If Railway builds the client and server from a
+single service, add the `VITE_POSTHOG_*` variables to that service before
+building.
 
 ## Production checklist
 
@@ -61,5 +72,16 @@ VITE_API_URL=https://your-worknavo-api.example/api
 - Set `CLIENT_URL` to the exact frontend origin, without a trailing slash.
 - Configure Resend or SMTP and send a test report to an address you control.
 - Confirm register, login, PDF download, and logout on the deployed URL.
+- Confirm PostHog receives `page_view`, `signup_completed`,
+  `login_completed`, `plan_selected`, `timer_started`, `timer_stopped`,
+  `worklog_created`, `project_created`, `member_invited`, `report_created`,
+  `report_downloaded`, `invoice_created`, `invoice_downloaded`, and
+  `analytics_csv_downloaded` events.
+- Confirm plan switching in Settings:
+  - Free blocks Analytics, Expenses, proof tracking, scheduled reports, and
+    Team-only work-log rules.
+  - Team unlocks Analytics, CSV export, and work-log rules.
+  - Pro unlocks Expenses, proof tracking, and scheduled reports.
+- Add a real payment provider later before charging customers.
 - Never commit `.env` files, MongoDB credentials, SMTP passwords, or Resend API
   keys.

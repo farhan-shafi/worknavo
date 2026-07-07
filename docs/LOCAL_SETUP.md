@@ -71,7 +71,13 @@ For local development:
 
 ```env
 VITE_API_URL=/api
+VITE_POSTHOG_KEY=
+VITE_POSTHOG_HOST=https://us.i.posthog.com
+VITE_POSTHOG_DISABLED=false
 ```
+
+Leave `VITE_POSTHOG_KEY` blank if you do not want local analytics events. Add a
+PostHog project key only when you intentionally want to test analytics.
 
 ## 5. Create the MongoDB Atlas database
 
@@ -117,7 +123,20 @@ npm run migrate:organizations
 This creates solo organizations for existing users and preserves their current
 records.
 
-## 9. Push the code to GitHub
+## 9. Test plan locks locally
+
+Payments are not connected yet. To test paid-plan behavior:
+
+1. Sign in as an Owner or Admin.
+2. Go to Settings → Plan.
+3. Select Free, Team, or Pro.
+4. Confirm the app reacts immediately:
+   - Free keeps the core workflow and blocks Analytics, Expenses, proof
+     tracking, scheduled reports, and Team-only work-log rules.
+   - Team unlocks Analytics, CSV export, and work-log rules.
+   - Pro unlocks Expenses, GPS/screenshot proof, and scheduled reports.
+
+## 10. Push the code to GitHub
 
 If you created your own repo on GitHub, connect this local project to it:
 
@@ -132,7 +151,7 @@ git push -u origin main
 If you already have a remote or branch name, adjust those commands to match
 your repo.
 
-## 10. Optional Cloudinary setup
+## 11. Optional Cloudinary setup
 
 Cloudinary is not wired into the app yet. If image uploads are added later, the
 server will need:

@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 import { Button } from '../../components/ui/button';
 import { ApiError } from '../../lib/api-client';
+import { trackEvent } from '../../lib/analytics';
 import { AuthShell } from './AuthShell';
 import { FormField } from './FormField';
 import { authApi } from './auth.api';
@@ -30,7 +31,10 @@ export function RegisterPage() {
   });
   const registerAccount = useMutation({
     mutationFn: authApi.register,
-    onSuccess: async ({ message }) => {
+    onSuccess: async ({ message }, variables) => {
+      trackEvent('signup_completed', {
+        workspace_type: variables.workspaceType,
+      });
       await queryClient.invalidateQueries({ queryKey: sessionQueryKey });
       toast.success(message);
       navigate('/app/dashboard', { replace: true });

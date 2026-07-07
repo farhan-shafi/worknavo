@@ -36,3 +36,7 @@ export const updateOrganizationSchema = z.object({
     )
     .optional(),
 });
+
+export const updateOrganizationPlanSchema = z.object({
+  subscriptionPlan: z.enum(['free', 'team', 'pro']),
+});

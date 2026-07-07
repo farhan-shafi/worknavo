@@ -1,7 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="WorkNavo">
-  <rect width="64" height="64" rx="16" fill="#17212b"/>
-  <circle cx="32" cy="32" r="20" fill="#fff7ee" opacity="0.96"/>
-  <path d="M42.5 19.5 35.7 37.7a3.2 3.2 0 0 1-1.9 1.9L21.5 44.5l4.9-12.3a3.2 3.2 0 0 1 1.9-1.9l14.2-10.8Z" fill="#e35d22"/>
-  <circle cx="32" cy="32" r="3.6" fill="#17212b"/>
-  <path d="M32 10v7M32 47v7M10 32h7M47 32h7" stroke="#fff7ee" stroke-width="3" stroke-linecap="round"/>
+<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="WorkNavo">
+  <rect x="4" y="4" width="56" height="56" rx="16" fill="#17212B"/>
+  <path d="M44.6 16.3 19.2 29.8c-2.3 1.2-1.9 4.5.65 5.15l10.85 2.8 2.8 10.85c.65 2.55 3.95 2.95 5.15.65l13.5-25.4c1.9-3.6-3.95-9.45-7.55-7.55Z" fill="#F05A24"/>
+  <circle cx="32" cy="32" r="4.5" fill="#FFF7EE"/>
 </svg>

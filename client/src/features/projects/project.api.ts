@@ -7,6 +7,7 @@ import type {
 } from '@clientflow/shared';
 
 import { request } from '../../lib/api-client';
+import { trackEvent } from '../../lib/analytics';
 import type { ProjectFormValues } from './project.schemas';
 
 export interface ProjectFilters {
@@ -72,11 +73,17 @@ export const projectApi = {
     request<ProjectResponse>(`/projects/${projectId}`),
   team: (projectId: string) =>
     request<{ members: ProjectTeamMember[] }>(`/projects/${projectId}/team`),
-  create: (values: ProjectFormValues) =>
-    request<ProjectResponse>('/projects', {
+  create: async (values: ProjectFormValues) => {
+    const response = await request<ProjectResponse>('/projects', {
       method: 'POST',
       body: JSON.stringify(projectInput(values)),
-    }),
+    });
+    trackEvent('project_created', {
+      has_budget: Boolean(response.project.estimatedBudget),
+      status: response.project.status,
+    });
+    return response;
+  },
   update: (projectId: string, values: ProjectFormValues) =>
     request<ProjectResponse>(`/projects/${projectId}`, {
       method: 'PATCH',

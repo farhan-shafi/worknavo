@@ -8,6 +8,7 @@ import type {
 } from '@clientflow/shared';
 
 import { downloadFile, request } from '../../lib/api-client';
+import { trackEvent } from '../../lib/analytics';
 import type {
   WorkLogFilters,
   WorkLogFormValues,
@@ -73,11 +74,19 @@ export const workLogApi = {
     request<WorkLogListResponse>(`/work-logs${queryString(filters)}`),
   get: (workLogId: string) =>
     request<WorkLogResponse>(`/work-logs/${workLogId}`),
-  create: (values: WorkLogFormValues) =>
-    request<WorkLogResponse>('/work-logs', {
+  create: async (values: WorkLogFormValues) => {
+    const response = await request<WorkLogResponse>('/work-logs', {
       method: 'POST',
       body: JSON.stringify(workLogInput(values)),
-    }),
+    });
+    trackEvent('worklog_created', {
+      entry_mode: response.workLog.entryMode,
+      billable: response.workLog.billable,
+      duration_hours: response.workLog.durationHours,
+      has_category: Boolean(response.workLog.categoryId),
+    });
+    return response;
+  },
   startTimer: (
     values: WorkLogTimerValues & { locationProof?: TimerLocationProofInput },
   ) =>
