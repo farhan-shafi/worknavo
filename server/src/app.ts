@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import * as helmetModule from 'helmet';
 
 import { env } from './config/env.js';
@@ -34,7 +34,7 @@ const shouldServeClient =
   env.NODE_ENV === 'production' && existsSync(clientIndexPath);
 
 export const app = express();
-const helmet = helmetModule.default;
+const helmet = helmetModule.default as unknown as () => RequestHandler;
 
 app.disable('x-powered-by');
 app.use(requestContext);
