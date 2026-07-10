@@ -1,10 +1,7 @@
-import {
-  planIncludes,
-  type Currency,
-  type InvoiceStatus,
-} from '@clientflow/shared';
+import type { Currency, InvoiceStatus } from '@clientflow/shared';
 import { Types, isValidObjectId, type FilterQuery } from 'mongoose';
 
+import { planIncludes } from '../../auth/plans.js';
 import { ClientModel, type ClientDocument } from '../../models/Client.model.js';
 import {
   InvoiceModel,

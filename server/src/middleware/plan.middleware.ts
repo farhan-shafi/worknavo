@@ -1,10 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
-import {
-  planFeatureMinimumPlan,
-  planIncludes,
-  type PlanFeature,
-} from '@clientflow/shared';
+import type { PlanFeature } from '@clientflow/shared';
 
+import { planFeatureMinimumPlan, planIncludes } from '../auth/plans.js';
 import { ApiError } from '../utils/api-error.js';
 
 const planLabels = {

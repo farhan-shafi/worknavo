@@ -1,6 +1,6 @@
-import { planIncludes } from '@clientflow/shared';
 import type { Request, Response } from 'express';
 
+import { planIncludes } from '../../auth/plans.js';
 import { toOrganizationContract } from '../../models/Organization.model.js';
 import { recordAudit } from '../audit/audit.service.js';
 import { toAuthUser } from '../../models/User.model.js';

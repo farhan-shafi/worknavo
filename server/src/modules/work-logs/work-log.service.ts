@@ -1,15 +1,15 @@
 import { mkdir, unlink, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import {
-  planIncludes,
-  type WorkLogBillingFilter,
-  type WorkLogClient,
-  type WorkLogProject,
+import type {
+  WorkLogBillingFilter,
+  WorkLogClient,
+  WorkLogProject,
 } from '@clientflow/shared';
 import { isValidObjectId, Types, type FilterQuery } from 'mongoose';
 
 import { ClientModel, type ClientDocument } from '../../models/Client.model.js';
+import { planIncludes } from '../../auth/plans.js';
 import {
   ProjectModel,
   type ProjectDocument,
