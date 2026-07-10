@@ -4,11 +4,23 @@ import { env } from './env.js';
 
 mongoose.set('strictQuery', true);
 
+let connectionPromise: Promise<typeof mongoose> | null = null;
+
 export async function connectDatabase() {
+  if (mongoose.connection.readyState === 1) {
+    return;
+  }
+
+  if (connectionPromise) {
+    await connectionPromise;
+    return;
+  }
+
   try {
-    await mongoose.connect(env.MONGO_URI, {
+    connectionPromise = mongoose.connect(env.MONGO_URI, {
       serverSelectionTimeoutMS: 4_000,
     });
+    await connectionPromise;
     console.info(`MongoDB connected: ${mongoose.connection.name}`);
   } catch (error) {
     console.warn(
@@ -18,6 +30,8 @@ export async function connectDatabase() {
     if (env.NODE_ENV === 'production') {
       throw error;
     }
+  } finally {
+    connectionPromise = null;
   }
 }
 
