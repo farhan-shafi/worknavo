@@ -17,8 +17,8 @@ Make sure you have:
 If you have not cloned the repository yet:
 
 ```bash
-git clone https://github.com/farhan-shafi/clientflow.git
-cd clientflow
+git clone https://github.com/farhan-shafi/worknavo.git
+cd worknavo
 ```
 
 If you are already inside the project folder, you can skip this step.
@@ -34,8 +34,8 @@ npm install
 Copy the example file into the server and client folders:
 
 ```bash
-cp .env.example server/.env
-cp .env.example client/.env
+cp server/.env.example server/.env
+cp client/.env.example client/.env
 ```
 
 Then edit them.
@@ -51,6 +51,7 @@ MONGO_URI=mongodb+srv://<username>:<password>@<cluster>/<database>
 JWT_ACCESS_SECRET=replace-with-at-least-32-random-characters
 JWT_REFRESH_SECRET=replace-with-a-different-32-character-secret
 CLIENT_URL=http://localhost:5173
+SCHEDULE_RUNNER_SECRET=replace-with-a-random-secret-for-scheduled-jobs
 RESEND_API_KEY=
 SMTP_HOST=
 SMTP_PORT=587
@@ -141,7 +142,7 @@ Payments are not connected yet. To test paid-plan behavior:
 If you created your own repo on GitHub, connect this local project to it:
 
 ```bash
-git remote add origin https://github.com/farhan-shafi/clientflow.git
+git remote add origin https://github.com/farhan-shafi/worknavo.git
 git branch -M main
 git add .
 git commit -m "Initial WorkNavo implementation"

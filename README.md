@@ -4,13 +4,9 @@ WorkNavo is a multi-tenant client operations platform for solo freelancers
 and companies. It connects team access, project assignments, time tracking,
 weekly reports, invoices, analytics, PDF exports, and email delivery.
 
-For a step-by-step local setup guide, see [docs/LOCAL_SETUP.md](docs/LOCAL_SETUP.md).
+[Live demo](https://clientflow-client.vercel.app/) · [Local setup](docs/LOCAL_SETUP.md) · [Deployment guide](docs/DEPLOYMENT.md)
 
-![WorkNavo dashboard](docs/screenshots/dashboard.png)
-
-<p align="center">
-  <img src="docs/screenshots/mobile-dashboard.png" alt="WorkNavo mobile navigation" width="320" />
-</p>
+![WorkNavo product overview](docs/screenshots/worknavo-overview.jpg)
 
 ## What the application does
 
@@ -63,7 +59,7 @@ flowchart LR
 The repository is an npm-workspace monorepo:
 
 ```text
-clientflow/
+worknavo/
 ├── client/                       React application
 │   └── src/
 │       ├── app/                  Router and global providers
@@ -299,6 +295,7 @@ MONGO_URI=mongodb+srv://USERNAME:PASSWORD@CLUSTER.mongodb.net/worknavo?retryWrit
 JWT_ACCESS_SECRET=replace-with-at-least-32-random-characters
 JWT_REFRESH_SECRET=replace-with-a-different-32-character-secret
 CLIENT_URL=http://localhost:5173
+SCHEDULE_RUNNER_SECRET=replace-with-a-random-secret-for-scheduled-jobs
 
 RESEND_API_KEY=re_your_resend_api_key
 SMTP_FROM=onboarding@resend.dev
@@ -369,6 +366,18 @@ Open:
 - Web app: <http://localhost:5173>
 - API: <http://localhost:5050/api>
 - Health check: <http://localhost:5050/api/health>
+
+## Quality checks
+
+Run the same checks expected before a production release:
+
+```bash
+npm test
+npm run lint
+npm run typecheck
+npm run build
+npm audit --omit=dev
+```
 
 ## Migrating existing freelancer data
 

@@ -30,6 +30,7 @@ MONGO_URI=mongodb+srv://...
 JWT_ACCESS_SECRET=use-a-random-secret-at-least-32-characters-long
 JWT_REFRESH_SECRET=use-a-different-random-secret-at-least-32-characters
 CLIENT_URL=https://your-worknavo-frontend.example
+SCHEDULE_RUNNER_SECRET=use-a-random-secret-for-scheduled-jobs
 RESEND_API_KEY=re_...
 SMTP_HOST=
 SMTP_PORT=587
@@ -70,6 +71,7 @@ building.
 - Allow the API host and your own IP in MongoDB Atlas Network Access.
 - Replace both JWT secrets with unrelated random values.
 - Set `CLIENT_URL` to the exact frontend origin, without a trailing slash.
+- Protect the scheduled-report runner with a unique `SCHEDULE_RUNNER_SECRET`.
 - Configure Resend or SMTP and send a test report to an address you control.
 - Confirm register, login, PDF download, and logout on the deployed URL.
 - Confirm PostHog receives `page_view`, `signup_completed`,
